@@ -5,8 +5,8 @@
    honor Code:_____“On my honor, I have neither given nor received unauthorized aid on this assignment, and I pledge that I am in compliance with the GMU Honor System.”
 */
 
-#define TIMEWINDOWSIZE 10
-#define DPT 2.4
+#define TIMEWINDOWSIZE 50
+#define DPT 2.4                       //degree per turn
 #define MOTOR_PIN 10
 #define IR_SENSOR_Interuppt_PIN 20
 #define FREQ_HZ   1000              // Desired PWM freq(Hz)
@@ -44,14 +44,16 @@ int FREQ_US;
 
 void setup() {
   Serial.begin(9600);
+    Serial1.begin(9600);
+
   pinMode(IR_SENSOR_Interuppt_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(IR_SENSOR_Interuppt_PIN), setTimeWindow, CHANGE);
 
   pinMode(MOTOR_PIN, OUTPUT);                                            // sets the digital pin as output
 
 
-  setRunTime = 10000000;  // runtime
-  desiredSpeed = 0 ;
+  setRunTime = 1800;  // runtime
+  desiredSpeed = 100 ;
   currentSpeed = 0;
   kp = 1 ; // proportional gain
 
@@ -64,51 +66,52 @@ void setup() {
 }
 
 void loop() {
-  tick = micros();                                              // get time at the start of the loop
+  //tick = micros();                                              // get time at the start of the loop
 
-  //Serial.println("start time");                                            
-  //Serial.println(tick);                                         
+  //Serial.println("start time");
+  //Serial.println(tick);
 
-  // GetSpeed(timeWindow);
+  GetSpeed(timeWindow);
 
-  // DesiredSpeed();
+  DesiredSpeed();
 
-  // error = desiredSpeed - currentSpeed;                                // this will be the error for the speed
+  error = desiredSpeed - currentSpeed;                                // this will be the error for the speed
+  //Serial.println(error);
+
 
   correctedSpeed = kp * error ;                                       // corrected speed
   //Serial.println(correctedSpeed);
-  // turnMotor();                                                        // set motor with the corrected speed
+  turnMotor();                                                        // set motor with the corrected speed
 
   //Serial.println(correctedSpeed);
-
 
 
   tock = micros();                                                 // get time at the end of the loop
 
-  //Serial.println("finish time");                             
-  // Serial.println(tock);                                            
+  //Serial.println("finish time");
+  // Serial.println(tock);
 
   sleepTime = setRunTime - (tock - tick);                               // calculate the total time for the program to run and how much time it has left to run
 
-  // Serial.println("sleep time");                                            
-  // Serial.println(sleepTime);                                            
+  //Serial.println("sleep time");
+  //Serial.println(sleepTime);
 
-  delayMicroseconds(sleepTime);                                                  //prints sleep time
+  //delayMicroseconds(sleepTime);                                                  //prints sleep time
 }
 
 
 //setTimeWindow
 void setTimeWindow() {
-  
-  currentTime = micros();           // set cureent time
 
-  timeWindow[i_w] = currentTime - previousTime;    // insert current time into time window
+  currentTime = micros() ;           // set cureent time
+
+  timeWindow[i_w] = (currentTime - previousTime) ;    // insert current time into time window
   previousTime = currentTime;                      // save previous time
-  
-  Serial.println("change of time: ");
-  loggedTime = timeWindow[i_w];                   
-  Serial.println(loggedTime);
-  
+
+  //Serial.println("change of time: ");
+  loggedTime = timeWindow[i_w];
+  //Serial.println(loggedTime);
+
   i_w ++;                           // increment time window frame
 
   if (i_w >= TIMEWINDOWSIZE) {
@@ -120,7 +123,7 @@ void setTimeWindow() {
 
 //get current speed
 void GetSpeed(unsigned long timeWindow[]) {
-  //Serial.print("im in current speed");
+  //Serial.println("im in current speed");
 
   int i = 0;
   unsigned long averageTime = 0;
@@ -129,29 +132,36 @@ void GetSpeed(unsigned long timeWindow[]) {
     i++;
   }
   averageTime = averageTime / TIMEWINDOWSIZE;       // calculate average windowtime
+  //Serial.println("Average time");
+  //Serial.println(averageTime);
 
-  currentSpeed = (int)(DPT * (1 / averageTime));
-  Serial.print(currentSpeed);
+  currentSpeed = (int)(DPT * (MICRO_US / averageTime));
+  //Serial.println("Current speed");
+  //Serial.println(currentSpeed);
 }
 
 //Desired Speed
 void DesiredSpeed() {
-  if (Serial.available() > 0) {
+  if (Serial1.available() > 0) {
     desiredSpeed = Convert();
+    Serial.println("desired speed");
+    Serial.println(desiredSpeed);
 
+    //Serial.println("error");
+    //Serial.println(error);
   }
 }
 
 //setMotor
 void  turnMotor() {
-  while (true) {
-    digitalWrite(MOTOR_PIN, HIGH);                                  // set motor on
-    delayMicroseconds(700);                                       // keep signal on
+  // while (true) {
+  digitalWrite(MOTOR_PIN, HIGH);                                  // set motor on
+  delayMicroseconds(1500);                                       // keep signal on
 
-    digitalWrite(MOTOR_PIN, LOW);                                   // set motor on
-    delayMicroseconds(300);                                        // keep signal off
-    //Serial.print("motor on");
-  }
+  digitalWrite(MOTOR_PIN, LOW);                                   // set motor on
+  delayMicroseconds(20);                                        // keep signal off
+  //Serial.print("motor on");
+  // }
 }
 
 // convert inputed serial data as a integer value
@@ -159,7 +169,7 @@ int Convert(void) {
   int incomingByte = 0;
   int integerValue = 0;
   while (1) {                                                                   // force into a loop until 'n' is received
-    incomingByte = Serial.read();                                               // byte that was read
+    incomingByte = Serial1.read();                                               // byte that was read
     if (incomingByte == '\n') break;                                            // exit the while(1), we're done receiving
     integerValue *= 10;                                                         // shift left 1 decimal place
     integerValue = ((incomingByte - 48) + integerValue);                        // convert ASCII to integer, add, and shift left 1 decimal place
