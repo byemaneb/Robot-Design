@@ -1,6 +1,6 @@
 
 /*Name:_______________________________________Berket Yemaneberhane
-   HW:________________________________________ECE-370: ECE-370: Distance Sensor Hookup to uController and "Speed" Encoder Wheel 
+   HW:________________________________________ECE-370: ECE-370: Distance Sensor Hookup to uController and "Speed" Encoder Wheel
    Date:______________________________________3/4/19
    honor Code:_____“On my honor, I have neither given nor received unauthorized aid on this assignment, and I pledge that I am in compliance with the GMU Honor System.”
 */
@@ -8,7 +8,7 @@
 #define TIMEWINDOWSIZE 10
 #define DPT 2.4
 #define MOTOR_PIN 10
-#define IR_SENSOR_Interuppt_PIN 4
+#define IR_SENSOR_Interuppt_PIN 20
 #define FREQ_HZ   1000              // Desired PWM freq(Hz)
 #define MICRO_US  1000000             // Number of micro seconds in 1 second
 
@@ -28,7 +28,11 @@ int correctedSpeed;      //corrected speed
 
 static unsigned long timeWindow[TIMEWINDOWSIZE]; // Time window array
 
+static unsigned long previousTime;  // used for setting window
 static unsigned long currentTime;  // used for setting window
+static unsigned long loggedTime;  // used for setting window
+
+
 
 static int i_w;  // increment from time window
 
@@ -40,9 +44,12 @@ int FREQ_US;
 
 void setup() {
   Serial.begin(9600);
-  attachInterrupt(IR_SENSOR_Interuppt_PIN, setTimeWindow, RISING);
-  pinMode(MOTOR_PIN, OUTPUT);                     // sets the digital pin as output
-  pinMode(IR_SENSOR_Interuppt_PIN, INPUT);
+  pinMode(IR_SENSOR_Interuppt_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(IR_SENSOR_Interuppt_PIN), setTimeWindow, CHANGE);
+
+  pinMode(MOTOR_PIN, OUTPUT);                                            // sets the digital pin as output
+
+
   setRunTime = 10000000;  // runtime
   desiredSpeed = 0 ;
   currentSpeed = 0;
@@ -52,32 +59,64 @@ void setup() {
 
   memset (timeWindow, 0, sizeof(timeWindow));
 
+  previousTime = 0;
+  currentTime = 0;
 }
 
 void loop() {
-  tick = micros();                // get time at the start of the loop
-  //Serial.println(tick);           //prints time since program started
+  tick = micros();                                              // get time at the start of the loop
 
-  GetSpeed(timeWindow);
+  //Serial.println("start time");                                            
+  //Serial.println(tick);                                         
 
-  DesiredSpeed();
+  // GetSpeed(timeWindow);
 
-  error = desiredSpeed - currentSpeed;  // this will be the error for the speed
+  // DesiredSpeed();
 
-  correctedSpeed = kp * error ;         // corrected speed
+  // error = desiredSpeed - currentSpeed;                                // this will be the error for the speed
+
+  correctedSpeed = kp * error ;                                       // corrected speed
   //Serial.println(correctedSpeed);
-  //turnMotor();           // set motor with the corrected speed
+  // turnMotor();                                                        // set motor with the corrected speed
 
   //Serial.println(correctedSpeed);
 
 
 
-  tock = micros();                   // get time at the end of the loop
-  Serial.println(tock);              //prints time since program started
-  sleepTime = setRunTime - (tock - tick); // calculate the total time for the program to run and how much time it has left to run
-  delayMicroseconds(sleepTime);      // set time for the program to sleep
+  tock = micros();                                                 // get time at the end of the loop
+
+  //Serial.println("finish time");                             
+  // Serial.println(tock);                                            
+
+  sleepTime = setRunTime - (tock - tick);                               // calculate the total time for the program to run and how much time it has left to run
+
+  // Serial.println("sleep time");                                            
+  // Serial.println(sleepTime);                                            
+
+  delayMicroseconds(sleepTime);                                                  //prints sleep time
+}
+
+
+//setTimeWindow
+void setTimeWindow() {
+  
+  currentTime = micros();           // set cureent time
+
+  timeWindow[i_w] = currentTime - previousTime;    // insert current time into time window
+  previousTime = currentTime;                      // save previous time
+  
+  Serial.println("change of time: ");
+  loggedTime = timeWindow[i_w];                   
+  Serial.println(loggedTime);
+  
+  i_w ++;                           // increment time window frame
+
+  if (i_w >= TIMEWINDOWSIZE) {
+    i_w = 0;                        // reset time window frame it max fram is reached
+  }
 
 }
+
 
 //get current speed
 void GetSpeed(unsigned long timeWindow[]) {
@@ -90,11 +129,10 @@ void GetSpeed(unsigned long timeWindow[]) {
     i++;
   }
   averageTime = averageTime / TIMEWINDOWSIZE;       // calculate average windowtime
-  
+
   currentSpeed = (int)(DPT * (1 / averageTime));
   Serial.print(currentSpeed);
 }
-
 
 //Desired Speed
 void DesiredSpeed() {
@@ -104,30 +142,15 @@ void DesiredSpeed() {
   }
 }
 
-//setTimeWindow
-void setTimeWindow() {
-  Serial.print("im in the set time window");
-
-  currentTime = micros();           // set cureent time
-  timeWindow[i_w] = currentTime;    // insert current time into time window
-  i_w ++;                           // increment time window frame
-
-
-  if (i_w >= TIMEWINDOWSIZE) {
-    i_w = 0;                        // reset time window frame it max fram is reached
-  }
-
-}
-
 //setMotor
 void  turnMotor() {
   while (true) {
     digitalWrite(MOTOR_PIN, HIGH);                                  // set motor on
-    delayMicroseconds(500);                                       // keep signal on
+    delayMicroseconds(700);                                       // keep signal on
 
     digitalWrite(MOTOR_PIN, LOW);                                   // set motor on
-    delayMicroseconds(500);                                        // keep signal off
-    Serial.print("motor on");
+    delayMicroseconds(300);                                        // keep signal off
+    //Serial.print("motor on");
   }
 }
 
@@ -145,6 +168,7 @@ int Convert(void) {
 }
 
 void convertDutyCycle(int duty_cycle) {
+
   //Serial.println("i made it to the convertor");
   on = int((duty_cycle * FREQ_US) / 100) ;                      // time to keep motor on
   off = int(FREQ_US - on);                                        // time to keep motor off
