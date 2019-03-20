@@ -5,10 +5,10 @@
    honor Code:_____“On my honor, I have neither given nor received unauthorized aid on this assignment, and I pledge that I am in compliance with the GMU Honor System.”
 */
 
-#define TIMEWINDOWSIZE 50
+#define TIMEWINDOWSIZE 5
 #define DPT 2.4                       //degree per turn
 #define MOTOR_PIN 10
-#define IR_SENSOR_Interuppt_PIN 20
+#define IR_SENSOR_Interuppt_PIN 9
 #define FREQ_HZ   1000              // Desired PWM freq(Hz)
 #define MICRO_US  1000000             // Number of micro seconds in 1 second
 
@@ -44,25 +44,32 @@ int FREQ_US;
 
 void setup() {
   Serial.begin(9600);
-    Serial1.begin(9600);
+  Serial1.begin(9600);
 
   pinMode(IR_SENSOR_Interuppt_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(IR_SENSOR_Interuppt_PIN), setTimeWindow, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(IR_SENSOR_Interuppt_PIN), setTimeWindow, RISING);
 
   pinMode(MOTOR_PIN, OUTPUT);                                            // sets the digital pin as output
 
 
   setRunTime = 1800;  // runtime
-  desiredSpeed = 100 ;
+  desiredSpeed = 0 ;
   currentSpeed = 0;
   kp = 1 ; // proportional gain
 
   FREQ_US =  (MICRO_US / FREQ_HZ); // set up the frequency
 
-  memset (timeWindow, 0, sizeof(timeWindow));
+  memset (timeWindow, 1, sizeof(timeWindow));
 
+  // set time counters
   previousTime = 0;
   currentTime = 0;
+
+  // set on and off values
+  on = 1000;
+
+  off = 0;
+
 }
 
 void loop() {
@@ -76,12 +83,13 @@ void loop() {
   DesiredSpeed();
 
   error = desiredSpeed - currentSpeed;                                // this will be the error for the speed
-  //Serial.println(error);
+  Serial.println(error);
 
 
   correctedSpeed = kp * error ;                                       // corrected speed
   //Serial.println(correctedSpeed);
-  turnMotor();                                                        // set motor with the corrected speed
+  //setMotor(correctedSpeed);
+  //turnMotor();                                                        // set motor with the corrected speed
 
   //Serial.println(correctedSpeed);
 
@@ -118,6 +126,10 @@ void setTimeWindow() {
     i_w = 0;                        // reset time window frame it max fram is reached
   }
 
+ // on = on + error;
+
+ // off = 1000 - on;
+
 }
 
 
@@ -142,24 +154,32 @@ void GetSpeed(unsigned long timeWindow[]) {
 
 //Desired Speed
 void DesiredSpeed() {
-  if (Serial1.available() > 0) {
+  if (Serial.available() > 0) {
     desiredSpeed = Convert();
-    Serial.println("desired speed");
-    Serial.println(desiredSpeed);
+    //Serial.println("desired speed");
+    //Serial.println(desiredSpeed);
 
     //Serial.println("error");
     //Serial.println(error);
   }
 }
 
+void setMotor(int correctSpeed ) {
+  on = on + correctSpeed;
+
+  off = 1000 - on;
+
+}
+
 //setMotor
 void  turnMotor() {
   // while (true) {
+
   digitalWrite(MOTOR_PIN, HIGH);                                  // set motor on
-  delayMicroseconds(1500);                                       // keep signal on
+  delayMicroseconds(on);                                       // keep signal on
 
   digitalWrite(MOTOR_PIN, LOW);                                   // set motor on
-  delayMicroseconds(20);                                        // keep signal off
+  delayMicroseconds(off);                                        // keep signal off
   //Serial.print("motor on");
   // }
 }
@@ -169,7 +189,7 @@ int Convert(void) {
   int incomingByte = 0;
   int integerValue = 0;
   while (1) {                                                                   // force into a loop until 'n' is received
-    incomingByte = Serial1.read();                                               // byte that was read
+    incomingByte = Serial.read();                                               // byte that was read
     if (incomingByte == '\n') break;                                            // exit the while(1), we're done receiving
     integerValue *= 10;                                                         // shift left 1 decimal place
     integerValue = ((incomingByte - 48) + integerValue);                        // convert ASCII to integer, add, and shift left 1 decimal place
