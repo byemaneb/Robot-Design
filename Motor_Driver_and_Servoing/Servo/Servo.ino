@@ -1,6 +1,6 @@
 
 #define MOTOR_PIN 10
-#define IR_SENSOR_Interuppt_PIN 9
+#define IR_SENSOR_Interuppt_PIN 15
 
 // variables
 int tick;
@@ -9,31 +9,37 @@ int currentPosition;
 
 void setup() {
   // Open serial communications and wait for port to open:
-  Serial1.begin(9600);
+  Serial.begin(9600);
   pinMode(MOTOR_PIN, OUTPUT);                                            // init the digital pin as output for motor control
   pinMode(IR_SENSOR_Interuppt_PIN, INPUT_PULLUP);                        // init inturrupt pin
   attachInterrupt(digitalPinToInterrupt(IR_SENSOR_Interuppt_PIN), count, RISING); // attach interupt to a function
   
-  desiredPosition =0;                                                   // init desiredPosition as 0 ; until user defines another one
-  tick = 0;                                                             // intit the tick counter for the IR sensor
+  //desiredPosition = 0;                                                   // init desiredPosition as 0 ; until user defines another one
+  //tick = 0;                                                             // intit the tick counter for the IR sensor
 }
 
 
 
 void loop() { // run over and over
   // if there is a value in the 
-  if (Serial1.available() > 0) {
+        //Serial.println("desiredPosition");
+
+  if (Serial.available() > 0) {
     desiredPosition = Convert();
-      Serial.print(desiredPosition);
+      Serial.println("desiredPosition");
+      Serial.println(desiredPosition);
       tick =0;
 
   }
 
   while(tick < desiredPosition ){
-    turnMotor();
+    turnMotor(100);
     Serial.println(tick);
   }
-  delay(1000);
+    turnMotor(0);
+
+  
+  delay(500);
 }
 
 // convert inputed serial data as a integer value
@@ -42,7 +48,7 @@ int Convert(void) {
   int integerValue = 0;
   int sign = 1;
   while (1) {                                                                   // force into a loop until 'n' is received
-    incomingByte = Serial1.read();                                               // byte that was read
+    incomingByte = Serial.read();                                               // byte that was read
     if (incomingByte == '\n') break;                                            // exit the while(1), we're done receiving
     if (incomingByte == 45) {
       sign= -1;                                                                 // make value negative
@@ -54,7 +60,7 @@ int Convert(void) {
   }
   integerValue = integerValue * sign;                                           //
   return integerValue;  
-   // Serial.println(integerValue);
+   //Serial.println(integerValue);
 }
 
 //
@@ -64,13 +70,7 @@ void count(void){
 }
 
 //setMotor
-void  turnMotor(void) {
-  // while (true) {
-  digitalWrite(MOTOR_PIN, HIGH);                                  // set motor on
-  delayMicroseconds(550);                                       // keep signal on
+void  turnMotor(int angle) {
+   analogWrite(MOTOR_PIN, angle); // analogRead values go from 0 to 1023, analogWrite values from 0 to 255
 
-  digitalWrite(MOTOR_PIN, LOW);                                   // set motor on
-  delayMicroseconds(450);                                        // keep signal off
-  //Serial.print("motor on");
-  // }
 }

@@ -5,10 +5,10 @@
    honor Code:_____“On my honor, I have neither given nor received unauthorized aid on this assignment, and I pledge that I am in compliance with the GMU Honor System.”
 */
 
-#define TIMEWINDOWSIZE 5
+#define TIMEWINDOWSIZE 20
 #define DPT 2.4                       //degree per turn
 #define MOTOR_PIN 10
-#define IR_SENSOR_Interuppt_PIN 9
+#define IR_SENSOR_Interuppt_PIN 15
 #define FREQ_HZ   1000              // Desired PWM freq(Hz)
 #define MICRO_US  1000000             // Number of micro seconds in 1 second
 
@@ -42,6 +42,9 @@ static int off;
 
 int FREQ_US;
 
+int out;
+int PWM;
+
 void setup() {
   Serial.begin(9600);
   Serial1.begin(9600);
@@ -52,28 +55,23 @@ void setup() {
   pinMode(MOTOR_PIN, OUTPUT);                                            // sets the digital pin as output
 
 
-  setRunTime = 1800;  // runtime
+  setRunTime =350000;  // runtime
   desiredSpeed = 0 ;
   currentSpeed = 0;
   kp = 1 ; // proportional gain
 
   FREQ_US =  (MICRO_US / FREQ_HZ); // set up the frequency
 
-  memset (timeWindow, 1, sizeof(timeWindow));
+  memset (timeWindow, 0, sizeof(timeWindow));
 
   // set time counters
   previousTime = 0;
   currentTime = 0;
 
-  // set on and off values
-  on = 1000;
-
-  off = 0;
-
 }
 
 void loop() {
-  //tick = micros();                                              // get time at the start of the loop
+  tick = micros();                                              // get time at the start of the loop
 
   //Serial.println("start time");
   //Serial.println(tick);
@@ -83,16 +81,24 @@ void loop() {
   DesiredSpeed();
 
   error = desiredSpeed - currentSpeed;                                // this will be the error for the speed
+  //Serial.println(error);
+
+  out = kp * error ;                                       // corrected speed
+  //Serial.println(out);
+  setMotor(error);
+  turnMotor();                                                        // set motor with the corrected speed
+
+  Serial.println("desiredSpeed");
+
+  Serial.println(desiredSpeed);
+  
+  Serial.println("currentSpeed");
+
+  Serial.println(currentSpeed);
+
+  Serial.println("error");
+
   Serial.println(error);
-
-
-  correctedSpeed = kp * error ;                                       // corrected speed
-  //Serial.println(correctedSpeed);
-  //setMotor(correctedSpeed);
-  //turnMotor();                                                        // set motor with the corrected speed
-
-  //Serial.println(correctedSpeed);
-
 
   tock = micros();                                                 // get time at the end of the loop
 
@@ -104,7 +110,7 @@ void loop() {
   //Serial.println("sleep time");
   //Serial.println(sleepTime);
 
-  //delayMicroseconds(sleepTime);                                                  //prints sleep time
+  delayMicroseconds(sleepTime);                                                  //prints sleep time
 }
 
 
@@ -118,7 +124,7 @@ void setTimeWindow() {
 
   //Serial.println("change of time: ");
   loggedTime = timeWindow[i_w];
-  //Serial.println(loggedTime);
+  
 
   i_w ++;                           // increment time window frame
 
@@ -126,12 +132,7 @@ void setTimeWindow() {
     i_w = 0;                        // reset time window frame it max fram is reached
   }
 
- // on = on + error;
-
- // off = 1000 - on;
-
 }
-
 
 //get current speed
 void GetSpeed(unsigned long timeWindow[]) {
@@ -144,44 +145,42 @@ void GetSpeed(unsigned long timeWindow[]) {
     i++;
   }
   averageTime = averageTime / TIMEWINDOWSIZE;       // calculate average windowtime
-  //Serial.println("Average time");
-  //Serial.println(averageTime);
 
-  currentSpeed = (int)(DPT * (MICRO_US / averageTime));
-  //Serial.println("Current speed");
-  //Serial.println(currentSpeed);
+
+  if (averageTime > 0) {
+    currentSpeed = (int)(DPT * (MICRO_US / averageTime));
+  } else {
+    currentSpeed = 0 ;
+  }
+
+
 }
 
 //Desired Speed
 void DesiredSpeed() {
   if (Serial.available() > 0) {
     desiredSpeed = Convert();
-    //Serial.println("desired speed");
-    //Serial.println(desiredSpeed);
-
-    //Serial.println("error");
-    //Serial.println(error);
   }
 }
 
-void setMotor(int correctSpeed ) {
-  on = on + correctSpeed;
+void setMotor(int error ) {
+  int newSpeed = 0;
+  if(error < 0 && PWM >= 0 ){
+    PWM-- ;
+  }
+  if(error > 0 && PWM < 255 ){
+    PWM++;
+  }
+  Serial.println("PWM");
 
-  off = 1000 - on;
+  Serial.println(PWM);
+
 
 }
 
 //setMotor
 void  turnMotor() {
-  // while (true) {
-
-  digitalWrite(MOTOR_PIN, HIGH);                                  // set motor on
-  delayMicroseconds(on);                                       // keep signal on
-
-  digitalWrite(MOTOR_PIN, LOW);                                   // set motor on
-  delayMicroseconds(off);                                        // keep signal off
-  //Serial.print("motor on");
-  // }
+  analogWrite(MOTOR_PIN, PWM); // analogRead values go from 0 to 1023, analogWrite values from 0 to 255
 }
 
 // convert inputed serial data as a integer value
