@@ -2,7 +2,7 @@
   This sketch connects to a wifi network using a WiFi shield.
 
   This example is written for a network where the microcontroller
-  has a static IP address
+  connects to a network using DHCP.
   
   Circuit:
    WiFi shield attached: WINC1500
@@ -12,9 +12,6 @@
 
 #include <SPI.h>
 #include <WiFi101.h>
-
-// the IP address for the shield:
-IPAddress ip(192, 168, 1, 101);
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = "";        // your network SSID (name)
@@ -55,9 +52,6 @@ void setup() {
     // don't continue:
     while (true);
   }
-
-  // initalize static Ip
-  WiFi.config(ip);
 
   // attempt to connect to WiFi network:
   while (status != WL_CONNECTED) {
