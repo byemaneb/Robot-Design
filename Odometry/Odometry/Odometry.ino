@@ -80,12 +80,11 @@ void loop() {
   // This will calculate the change in time, and basically run an update based on the refresh time
   timeTick = millis();
   while (timeTock < REFRESH_TIME ) {
-     matrix();
-     analytical();
-    
     timeCurrent = millis();
     timeTock = timeCurrent - timeTick;
   }
+  matrix();
+  analytical();
 
 }
 
@@ -187,7 +186,7 @@ void matrix(void) {
   leftAngle = angle(distanceTraveledLeft);
 
   thetaZ = rightAngle - leftAngle;
-  
+
   rotationMatrix[4][4] = {
     {cos(thetaZ), -sin(thetaZ), 0, 0 },
     {sin(thetaZ), cos(thetaZ), 0, 0},
@@ -195,10 +194,10 @@ void matrix(void) {
     {0, 0, 0, 1},
   };
 
-  //transformMatrix = (rotationMatrix * currentDirection * currentPosition) 
+  //transformMatrix = (rotationMatrix * currentDirection * currentPosition)
   // this will claculate the new posistion of the robot
-    matrixMultiplication(currentPosition,directionMatrix,temp);       
-    matrixMultiplication(temp,rotationMatrix,transformMatrix);
+  matrixMultiplication(currentPosition, directionMatrix, temp);
+  matrixMultiplication(temp, rotationMatrix, transformMatrix);
 
   // we then need to update the posistion of the robot
   //update x posistion
@@ -213,13 +212,13 @@ void matrix(void) {
 }
 
 // multiply 2 matrix of any size
-void matrixMultiplication(int mat1[][matrixSize], int mat2[][matrixSize], int res[][matrixSize]){ 
-    int i, j, k; 
-    for (i = 0; i < matrixSize; i++) { 
-        for (j = 0; j < matrixSize; j++) { 
-            res[i][j] = 0; 
-            for (k = 0; k < NmatrixSize; k++) 
-                res[i][j] += mat1[i][k] * mat2[k][j]; 
-        } 
-    } 
-} 
+void matrixMultiplication(int mat1[][matrixSize], int mat2[][matrixSize], int res[][matrixSize]) {
+  int i, j, k;
+  for (i = 0; i < matrixSize; i++) {
+    for (j = 0; j < matrixSize; j++) {
+      res[i][j] = 0;
+      for (k = 0; k < NmatrixSize; k++)
+        res[i][j] += mat1[i][k] * mat2[k][j];
+    }
+  }
+}
