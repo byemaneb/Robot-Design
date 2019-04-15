@@ -43,7 +43,7 @@ int currentState = 0;
 int previousState = 0;
 
 int motorPin = FORWARD_MOTOR_PIN;
-int turnDirection = 1;
+int turnDirection = 0;
 
 int error = 0;
 
@@ -60,7 +60,7 @@ int Convert(void) {
   int integerValue = 0;
   int sign = 1;
   while (1) {                                                                   // force into a loop until 'n' is received
-    incomingByte = Serial.read();                                               // byte that was read
+    incomingByte = Serial1.read();                                               // byte that was read
     if (incomingByte == '\n') break;                                            // exit the while(1), we're done receiving
     if (incomingByte == 45) {
       sign = -1;                                                                // make value negative
@@ -79,6 +79,7 @@ void motorDirection(void) {
   if ((currentState == 1) && (previousState == 3)) {
     //motorPin = FORWARD_MOTOR_PIN;
     turnDirection = FORWARD;
+    
   }
 
   if ((currentState == 2) && (previousState == 3)) {
@@ -149,6 +150,7 @@ void pController() {
 void setup() {
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
+  Serial1.begin(9600);
 
   //initialize pins
   pinMode(FORWARD_MOTOR_PIN, OUTPUT);
@@ -176,34 +178,61 @@ void loop() {
 
 
   while (1) {
-    encoderState();
-    motorDirection();
+    //encoderState();
+    //Serial.println(currentState);
+    
+    //motorDirection();
+    //Serial.println(turnDirection);
 
     // Input serial data from Pi
-    if (Serial.available() > 0) {
+    if (Serial1.available() > 0) {
       desiredAngle = Convert();
       changeAngle = desiredAngle - currentAngle;
-
+      Serial.println("desiredAngle");
+      Serial.println(desiredAngle);
     }
+/*
+
+
+
 
     if (currentAngle < desiredAngle) {
       //pController();
-       degree = DEGREES_PER_TICK;
+      // degree = DEGREES_PER_TICK;
       motorPin = FORWARD_MOTOR_PIN;
-    } else if (desiredAngle < currentAngle) {
+    } else if (currentAngle > desiredAngle) {
       //pController();
-      degree = -DEGREES_PER_TICK;
+      //degree = -DEGREES_PER_TICK;
       motorPin = REVERSE_MOTOR_PIN;
     } else {
       break;
     }
 
 
-    turnMotor(110);
-    Serial.println(currentAngle);
+    if ((motorPin == FORWARD_MOTOR_PIN) && (turnDirection == FORWARD) && (currentAngle < desiredAngle)) {
+      degree = DEGREES_PER_TICK;
+      //delay(500);
+      //Serial.println("im am going forward");
+    } else if ((motorPin == REVERSE_MOTOR_PIN) && (turnDirection == REVERSE) && (currentAngle > desiredAngle)) {
+      degree = -DEGREES_PER_TICK;
+      //delay(500);
+      //Serial.println("im am going reverse");
+    } else {
+      degree = 0;
+      //Serial.println("nothing is happening");
+    }
+
+
+
+
+
+    //turnMotor(110);
+    //Serial.println(currentAngle);
+    */
   }
   turnMotor(0);
 
-  Serial.println(currentAngle);
+
+  //Serial.println(currentAngle);
   delay(500);
 }
