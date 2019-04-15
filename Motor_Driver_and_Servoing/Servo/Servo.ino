@@ -40,6 +40,7 @@ int currentState = 0;
 int previousState = 0;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 int motorPin = FORWARD_MOTOR_PIN;
 int turnDirection = 0;
 
@@ -51,11 +52,15 @@ long degree = DEGREES_PER_TICK;
 =======
 int turnDirection = 0;
 >>>>>>> parent of a01fea9... Update Servo.ino
+=======
+int turnDirection = 0;
+>>>>>>> parent of a01fea9... Update Servo.ino
 
 /////////////////////////////////////////////////////////////////
 
 // methods used
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 int Convert(void) {
   int incomingByte = 0;
@@ -76,6 +81,8 @@ int Convert(void) {
   return integerValue;
 }
 
+=======
+>>>>>>> parent of a01fea9... Update Servo.ino
 =======
 >>>>>>> parent of a01fea9... Update Servo.ino
 //motor direction
@@ -143,6 +150,7 @@ void loop() {
   previousState  = currentState;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   while (1) {
     //encoderState();
     //Serial.println(currentState);
@@ -201,6 +209,9 @@ void loop() {
 
   //Serial.println(currentAngle);
   delay(500);
+=======
+
+>>>>>>> parent of a01fea9... Update Servo.ino
 =======
 
 >>>>>>> parent of a01fea9... Update Servo.ino
