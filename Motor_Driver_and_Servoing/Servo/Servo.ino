@@ -1,6 +1,4 @@
 /*
-
-
 */
 /////////////////////////////////////////////////////////////////
 
@@ -18,20 +16,23 @@
 #define FORWARD 1
 #define REVERSE -1
 
-#define DEGREES_PER_TICK  2.4
+#define DEGREES_PER_TICK  2.6
+
+#define ALLOWED_ERROR 5
 
 /////////////////////////////////////////////////////////////////
 
 //variables
 
 int desiredAngle = 0;
-int currentAngle = 0;
+long currentAngle = 0;
+int changeAngle = 0;
+int angleTemp = 0;
 
-int currentTick;
+int currentTick = 0;
+int previousTick = 0;
 int desiredTick = 0;
 int tick = 0;
-
-int error = 0;
 
 int BOTTOM_IR_SENSOR = 0;
 int TOP_IR_SENSOR = 0;
@@ -39,8 +40,6 @@ int TOP_IR_SENSOR = 0;
 int currentState = 0;
 int previousState = 0;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 int motorPin = FORWARD_MOTOR_PIN;
 int turnDirection = 1;
 
@@ -49,25 +48,17 @@ int error = 0;
 int temp = 0;
 int degreeMoved = 0;
 long degree = DEGREES_PER_TICK;
-=======
-int turnDirection = 0;
->>>>>>> parent of a01fea9... Update Servo.ino
-=======
-int turnDirection = 0;
->>>>>>> parent of a01fea9... Update Servo.ino
 
 /////////////////////////////////////////////////////////////////
 
 // methods used
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 int Convert(void) {
   int incomingByte = 0;
   int integerValue = 0;
   int sign = 1;
   while (1) {                                                                   // force into a loop until 'n' is received
-    incomingByte = Serial.read();                                               // byte that was read
+    incomingByte = Serial1.read();                                               // byte that was read
     if (incomingByte == '\n') break;                                            // exit the while(1), we're done receiving
     if (incomingByte == 45) {
       sign = -1;                                                                // make value negative
@@ -81,17 +72,15 @@ int Convert(void) {
   return integerValue;
 }
 
-=======
->>>>>>> parent of a01fea9... Update Servo.ino
-=======
->>>>>>> parent of a01fea9... Update Servo.ino
 //motor direction
 void motorDirection(void) {
   if ((currentState == 1) && (previousState == 3)) {
+    //motorPin = FORWARD_MOTOR_PIN;
     turnDirection = FORWARD;
   }
 
   if ((currentState == 2) && (previousState == 3)) {
+    //motorPin = REVERSE_MOTOR_PIN;
     turnDirection = REVERSE;
   }
 }
@@ -112,16 +101,53 @@ void encoderState(void) {
   }
 }
 
-void counter(void) {
-  tick++;
+//setMotor
+void  turnMotor(int PWM) {
+  analogWrite(motorPin, PWM); // analogRead values go from 0 to 1023, analogWrite values from 0 to 255
 }
 
+
+// converts the given angle into ticks
+int convertAngleToTick(int angle) {
+  int tick = angle / DEGREES_PER_TICK;
+  return tick;
+}
+
+// converts the given tick into an angle
+int convertTickToAngle(int tick) {
+  int angle = tick * DEGREES_PER_TICK;
+  return angle;
+}
+
+void counter(void) {
+  currentAngle = currentAngle + degree ;
+  //currentTick++;
+  //currentTick = currentTick + (currentTick * turnDirection);
+  // Serial.println("currentTick");
+  // Serial.println(currentTick);
+}
+
+// p controller for error
+void pController() {
+  if (abs(changeAngle) < 90) {
+    degree = DEGREES_PER_TICK;
+  } else if (abs(changeAngle) > 90 && abs(changeAngle) < 180) {
+    degree = DEGREES_PER_TICK;
+  } else if (abs(changeAngle) > 180 && abs(changeAngle) < 270) {
+    degree = 10;
+  } else if (abs(changeAngle) > 270 && abs(changeAngle) < 360) {
+    degree = DEGREES_PER_TICK;
+  } else {
+    degree = DEGREES_PER_TICK;
+  }
+}
 /////////////////////////////////////////////////////////////////
 
 //put your setup code
 void setup() {
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
+  Serial1.begin(9600);
 
   //initialize pins
   pinMode(FORWARD_MOTOR_PIN, OUTPUT);
@@ -141,30 +167,29 @@ void setup() {
 
 // main code
 void loop() {
+  //encoderState();
+  // motorDirection();
+  // previousState = currentState;
+  // Input serial data from Pi
 
-  // case where
-  encoderState();
-  motorDirection();
-  previousState  = currentState;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
+
   while (1) {
     encoderState();
     motorDirection();
 
     // Input serial data from Pi
-    if (Serial.available() > 0) {
+    if (Serial1.available() > 0) {
       desiredAngle = Convert();
       changeAngle = desiredAngle - currentAngle;
 
     }
 
-    if (currentAngle < desiredAngle) {
+    if ((currentAngle < desiredAngle)&& (currentAngle < MAX_ANGLE)) {
       //pController();
        degree = DEGREES_PER_TICK;
       motorPin = FORWARD_MOTOR_PIN;
-    } else if (desiredAngle < currentAngle) {
+    } else if ((currentAngle > desiredAngle)&& (currentAngle > MIN_ANGLE)) {
       //pController();
       degree = -DEGREES_PER_TICK;
       motorPin = REVERSE_MOTOR_PIN;
@@ -173,17 +198,11 @@ void loop() {
     }
 
 
-    turnMotor(110);
+    turnMotor(115);
     Serial.println(currentAngle);
   }
   turnMotor(0);
 
   Serial.println(currentAngle);
   delay(500);
-=======
-
->>>>>>> parent of a01fea9... Update Servo.ino
-=======
-
->>>>>>> parent of a01fea9... Update Servo.ino
 }
