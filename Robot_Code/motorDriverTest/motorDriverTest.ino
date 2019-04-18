@@ -7,8 +7,10 @@
 
 int robotDirection = 0;
 void setup() {
-  // put your setup code here, to run once:
+  //intialize serial console
   Serial.begin(9600);
+
+  //initailize all ports
   pinMode(LEFT_WHEEL_FORWARD, OUTPUT);
   pinMode(LEFT_WHEEL_REVERSE, OUTPUT);
   pinMode(RIGHT_WHEEL_FORWARD, OUTPUT);
@@ -16,7 +18,7 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  // recieve and convert user input
   if (Serial.available() > 0) {
     robotDirection = Convert();
   }
@@ -24,16 +26,21 @@ void loop() {
 
 
   if (robotDirection == 1) {
+    //drive both wheels forward
     analogWrite(LEFT_WHEEL_REVERSE, STOP);
     analogWrite(RIGHT_WHEEL_REVERSE, STOP);
     analogWrite(LEFT_WHEEL_FORWARD, ANGLE);
     analogWrite(RIGHT_WHEEL_FORWARD, ANGLE);
   } else if (robotDirection == -1) {
+    
+    //drive both wheels reverse
     analogWrite(LEFT_WHEEL_FORWARD, STOP);
     analogWrite(RIGHT_WHEEL_FORWARD, STOP);
     analogWrite(LEFT_WHEEL_REVERSE, ANGLE);
     analogWrite(RIGHT_WHEEL_REVERSE, ANGLE);
   } else {
+    
+    //Stop robot
     analogWrite(LEFT_WHEEL_REVERSE, STOP);
     analogWrite(RIGHT_WHEEL_REVERSE, STOP);
     analogWrite(LEFT_WHEEL_FORWARD, STOP);
