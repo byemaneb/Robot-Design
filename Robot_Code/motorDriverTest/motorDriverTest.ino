@@ -1,7 +1,8 @@
-#define LEFT_WHEEL_FORWARD 13
+
+#define LEFT_WHEEL_FORWARD 11
 #define LEFT_WHEEL_REVERSE 10
-#define RIGHT_WHEEL_FORWARD 12
-#define RIGHT_WHEEL_REVERSE 11
+#define RIGHT_WHEEL_FORWARD 13
+#define RIGHT_WHEEL_REVERSE 12
 #define ANGLE 115
 #define STOP 0
 
@@ -15,6 +16,12 @@ void setup() {
   pinMode(LEFT_WHEEL_REVERSE, OUTPUT);
   pinMode(RIGHT_WHEEL_FORWARD, OUTPUT);
   pinMode(RIGHT_WHEEL_REVERSE, OUTPUT);
+
+  //Stop robot
+  analogWrite(LEFT_WHEEL_REVERSE, STOP);
+  analogWrite(RIGHT_WHEEL_REVERSE, STOP);
+  analogWrite(LEFT_WHEEL_FORWARD, STOP);
+  analogWrite(RIGHT_WHEEL_FORWARD, STOP);
 }
 
 void loop() {
@@ -32,14 +39,14 @@ void loop() {
     analogWrite(LEFT_WHEEL_FORWARD, ANGLE);
     analogWrite(RIGHT_WHEEL_FORWARD, ANGLE);
   } else if (robotDirection == -1) {
-    
+
     //drive both wheels reverse
     analogWrite(LEFT_WHEEL_FORWARD, STOP);
     analogWrite(RIGHT_WHEEL_FORWARD, STOP);
     analogWrite(LEFT_WHEEL_REVERSE, ANGLE);
     analogWrite(RIGHT_WHEEL_REVERSE, ANGLE);
   } else {
-    
+
     //Stop robot
     analogWrite(LEFT_WHEEL_REVERSE, STOP);
     analogWrite(RIGHT_WHEEL_REVERSE, STOP);
@@ -68,5 +75,4 @@ int Convert(void) {
   integerValue = integerValue * sign;                                           //
   return integerValue;
   //Serial.println(integerValue);
-
 }
