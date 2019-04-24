@@ -14,7 +14,6 @@ while True:
 	#speed,angle = struct.unpack("!ff",data)
 	#print("speed",speed)
 	#print("angle",angle)
-	#value = struct.unpack("!ff",data)
 	print("recieved message is ",data)
 	
 	

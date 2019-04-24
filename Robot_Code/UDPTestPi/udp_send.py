@@ -1,18 +1,6 @@
 import socket
 import struct
 
-class user:
-	def __init__(self,speed= 0,angle = 0):
-		self.speed = speed
-		self.angle = angle
-		
-	def getSpeed(self):
-		return self.speed  
-	
-	def getAngle(self):
-		return self.angle
-
-
 UDP_IP = "172.20.10.7"
 UDP_PORT = 5005
 MESSAGE = "Hello, World!"
