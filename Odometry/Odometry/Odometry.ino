@@ -44,9 +44,9 @@ int leftThetaX = 0;
 int leftThetaY = 0;
 
 // robot position
-static int xPosition = 0;
-static int yPosition = 0;
-static int zPosition = 0;
+int xPosition = 0;
+int yPosition = 0;
+int zPosition = 0;
 
 // number of ticks
 int rightTick = 150;
@@ -75,25 +75,45 @@ int matrixSize = 4;
 int rows = 4;
 int columns = 4;
 
+float positionMatrix[4][4] = {
+    {1, 0, 0, 0},
+    {0, 1, 0, 0},
+    {0, 0, 1, 0},
+    {0, 0, 0, 1},
+  };
+
+  float directionMatrix[4][4] = {
+    {1, 0, 0, ROBOT_WIDTH},
+    {0, 1, 0, 0},
+    {0, 0, 1, 0},
+    {0, 0, 0, 1},
+  };
+
 /////////////////////////////////////////////////////////////////////////////////////
 /* initialization and code*/
 //initializations
 void setup() {
   // calulat the distance per tick
   distancePerTick = (2 * PI * WHEEL_RADIUS) / (TICKS_PER_ROTATION * TICK_REV);
+  positionMatrix[0][0] =1;
+  positionMatrix[1][1] =1;
+  positionMatrix[2][2] =1;
+  positionMatrix[3][3] =1;
 }
 
 // implemented codes
 void loop() {
   // This will calculate the change in time, and basically run an update based on the refresh time
+  /*
   timeTick = millis();
   while (timeTock < REFRESH_TIME ) {
     timeCurrent = millis();
     timeTock = timeCurrent - timeTick;
   }
+  */
   matrix();
  // analytical();
-  delay(10000);
+  delay(2000);
 }
 /////////////////////////////////////////////////////////////////////////////////////
 
@@ -166,25 +186,13 @@ void analytical(void) {
 
 // calculateing using the matrix method
 void matrix(void) {
-  //float test = 0;
-  // matrix
-  float positionMatrix[4][4] = {
-    {1, 0, 0, xPosition},
-    {0, 1, 0, yPosition},
-    {0, 0, 1, zPosition},
-    {0, 0, 0, 1},
-  };
 
-  float directionMatrix[4][4] = {
-    {1, 0, 0, ROBOT_WIDTH},
-    {0, 1, 0, 0},
-    {0, 0, 1, 0},
-    {0, 0, 0, 1},
+  float transformMatrix[4][4]= {
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
   };
-
-  //float transformMatrix[4][4];
-  float transformMatrix[4][4];
-  float temporary[4][4];
 
   // distance right and left wheel traveled
   distanceTraveledRight = distance(rightTick);
@@ -197,8 +205,7 @@ void matrix(void) {
   leftAngle = matAngle(distanceTraveledLeft);
 
   thetaZ = rightAngle - leftAngle;
-  //Serial.println ("thetaZ " );
-  //Serial.println (thetaZ);
+
  float rotationMatrix[4][4]  = {
     {cos(thetaZ), -sin(thetaZ), 0, 0},
     {sin(thetaZ), cos(thetaZ), 0, 0},
@@ -206,26 +213,31 @@ void matrix(void) {
     {0, 0, 0, 1},
   };
 
-  //transformMatrix = (rotationMatrix * currentDirection * currentPosition)
   // this will claculate the new posistion of the robot
   matrixMultiplication(directionMatrix, rotationMatrix,positionMatrix,transformMatrix);
-  //printMatrix(temporary);
-  //Serial.println(" ");
-  //Serial.println(" ");
-  //matrixMultiplication(temporary, positionMatrix, transformMatrix);
-
+  
   // we then need to update the posistion of the robot
+  
   //update x posistion
-  //xPosition = transformMatrix[1][4];
+  xPosition = transformMatrix[0][3];
 
   //update y posistion
-  //yPosition = transformMatrix[2][4];
+  yPosition = transformMatrix[1][3];
 
   //update z posistion
-  //zPosition = transformMatrix[3][4];
+  zPosition = transformMatrix[2][3];
+
+  positionMatrix[0][3] = xPosition;
+
+  //update y posistion
+  positionMatrix[1][3] = xPosition;
+
+  //update z posistion
+  positionMatrix[2][3] = xPosition;
+  
 
   // print values and see that they are inputted correctly
-  //printMatrix(transformMatrix);
+  printMatrix(positionMatrix);
 }
 
 // multiply 2 matrix of any size
@@ -246,6 +258,17 @@ void matrixMultiplication(float mat1[][MATRIX_SIZE],float mat2[][MATRIX_SIZE],fl
         temp1 = mat1[i][k];
         temp2 = mat2[k][j];
         temp[i][j] += temp1 * temp2 ;
+       /*
+        Serial.print("i");
+        Serial.print(i);
+        Serial.print("");
+        Serial.print("j");
+        Serial.print(j);
+                Serial.print("k");
+        Serial.print(k);
+        Serial.println("");
+        */
+
       }
     }
   }
@@ -268,16 +291,15 @@ void printMatrix( const float matrix[][MATRIX_SIZE] ) {
    for ( int i = 0; i < rows; ++i ) {
       // loop through columns of current row
       for ( int j = 0; j < columns; ++j ){
-      //Serial.print (matrix[ i ][ j ] );
-      //Serial.print (" " );
+      Serial.print (matrix[ i ][ j ] );
+      Serial.print (" " );
       }
-      //Serial.println (" " );
+      Serial.println (" " );
    } 
-   //Serial.println (" " );
+   Serial.println (" " );
 }
 
 //angle using thte cercumfrence method
 float matAngle(float wheelDistance){
-  
   return  2 *PI * (wheelDistance / robotCircumference);
 }

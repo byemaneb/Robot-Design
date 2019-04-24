@@ -3,12 +3,32 @@
 #include <SPI.h>
 #include <WiFi101.h>
 #include <WiFiUdp.h>
+#include <Wire.h>
+#include <LSM303.h>
 
 #define SECRET_SSID "Berket"
 #define SECRET_PASS "Berket12"
 
 #define RIGHT_WHEEL_IR_SENSOR 16
-#define LEFT_WHEEL_IR_SENSOR 16
+#define LEFT_WHEEL_IR_SENSOR 15
+
+#define LEFT_WHEEL_FORWARD 10
+#define LEFT_WHEEL_REVERSE 11
+#define RIGHT_WHEEL_FORWARD 12
+#define RIGHT_WHEEL_REVERSE 13
+#define ANGLE 115
+#define STOP 0
+
+// use for matrix multiplication
+#define ROBOT_WIDTH 95     //length between wheels
+#define WHEEL_RADIUS 15    // wheel radius in cm
+#define TICKS_PER_ROTATION 150   // gear ratio relavent to output shaft
+#define REFRESH_TIME 1000     // amount of time to capture the number of ticks (ms)
+#define PI 3.1415926535897932384626433832795    // Pie
+#define MATRIX_SIZE 4
+
+
+
 
 /*SBC: Code for raspberry Pi
    connect2port()
@@ -25,37 +45,38 @@
       #AccessPoinr()
       #OpenPort()
       #initailizeStructure()  // this is will be done through the global struct
-      SetIRSensor()
-      motorSetup()
-      IMUSetup()
-      debugSetup() #notblocking
+      #SetIRSensor()
+      #motorSetup()
+      ****IMUSetup()
+      #debugSetup() #notblocking
 
    Loop:
-      checkIMU()
-      a = checkUDP() #non- blocking
-      (V, Delta )= Parse (a)
+      ****checkIMU()
+      #a = checkUDP() #non- blocking
+      #(V, Delta )= Parse (a)
       setSpeed(V)
       setDir(Delta) #motorLeft and motorRight are global variables
-      if(picked up) #motorLeft and motorRight = 0 are global variables
+      ****if(picked up) #motorLeft and motorRight = 0 are global variables
       sleep() # this can basically be your refresh rate
 */
 
-
-int status = WL_IDLE_STATUS;      
+//use for wifi connection
+int status = WL_IDLE_STATUS;
 char ssid[] = SECRET_SSID;        // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
 int keyIndex = 0;            // your network key Index number (needed only for WEP)
 
-unsigned int localPort = 5005;      // local port to listen on
 
+//set up UDP port
+unsigned int localPort = 5005;      // local port to listen on
 char packetBuffer[255]; //buffer to hold incoming packet
 char  ReplyBuffer[] = "acknowledged";       // a string to send back
-
 WiFiUDP Udp;
 
 // this will be the data structure used to store all our data
 struct dataStructure {
   float robotSpeed = 0;
+  float robotTurn = 0;
   float robotAngle = 0;
 };
 
@@ -65,6 +86,52 @@ dataStructure *robotData;
 //test variables
 int rightWheelValue = 0;
 int leftWheelValue = 0;
+int robotDirection = 0;
+int rightWheelTick = 0;
+int leftWheelTick = 0;
+
+// use for transform
+float wheelDistancePerTick = (2 * PI *  WHEEL_RADIUS) / TICKS_PER_ROTATION;
+float cRobot = 2 * PI *  ROBOT_WIDTH;
+float phi = (wheelDistancePerTick / cRobot) * 2 * PI;
+float robotRadius = ROBOT_WIDTH / 2;
+float xDistance = sin(phi) * robotRadius;
+float yDistance = cos(phi) * robotRadius;
+float temp1, temp2;
+int i, j, k;
+
+float transformMatrixRight[4][4] = {
+  {cos(phi), -sin(phi), 0, xDistance},
+  {sin(phi), cos(phi), 0, yDistance},
+  {0, 0, 0, 0},
+  {0, 0, 0, 1},
+};
+
+float transformMatrixLeft[4][4] = {
+  {cos(-phi), -sin(-phi), 0, -xDistance},
+  {sin(-phi), cos(-phi), 0, -yDistance},
+  {0, 0, 0, 0},
+  {0, 0, 0, 1},
+};
+
+float transformMatrix[4][4] = {
+  {1, 0, 0, 0},
+  {0, 1, 0, 0},
+  {0, 0, 1, 0},
+  {0, 0, 0, 1},
+};
+
+// compass
+float north = (0 / 360)* 2 * PI;
+float south = (180 / 360)* 2 * PI;
+float east = (360 / 360)* 2 * PI;
+float west = (90 / 360)* 2 * PI;
+
+float currentRotationAngle = 0;
+
+LSM303 compass;
+/////////////////////////////////////////////////////////////////////////////////////
+
 
 // print wifi details
 void printWiFiStatus() {
@@ -91,7 +158,7 @@ void connectWifi() {
 
   //Initialize serial and wait for port to open:
   Serial.begin(9600);
-  
+
   // check for the presence of the shield:
   if (WiFi.status() == WL_NO_SHIELD) {
     Serial.println("WiFi shield not present");
@@ -117,10 +184,8 @@ void connectWifi() {
   Udp.begin(localPort);
 }
 
-
-//  this will read and parse the incoming data 
+//  this will read and parse the incoming data
 void readUDP() {
-
   // if there's data available, read a packet
   int packetSize = Udp.parsePacket();
   if (packetSize)
@@ -139,9 +204,11 @@ void readUDP() {
     robotData  = (dataStructure*)packetBuffer;
     Udp.read( (char *) robotData, sizeof( robotData));      // read the data packet
 
-    Serial.println("variable 1");
+    Serial.println("speed");
     Serial.println(robotData->robotSpeed);
-    Serial.println("variable 2");
+    Serial.println("turn");
+    Serial.println(robotData->robotTurn);
+    Serial.println("angle");
     Serial.println(robotData->robotAngle);
 
     if (len > 0) packetBuffer[len] = 0;
@@ -153,27 +220,174 @@ void readUDP() {
   }
 }
 
-void initializePorts(){
-    //intialize serial console
-  Serial.begin(9600);
 
-  //initailize all ports
-  pinMode(RIGHT_WHEEL_IR_SENSOR, INPUT);
-  pinMode(LEFT_WHEEL_IR_SENSOR, INPUT);
+
+
+
+
+// this will either drive the Robot forward, left or right or stop
+
+void driveRobot() {
+   // Serial.println("speed");
+    //Serial.println(robotData->robotSpeed);
+    //Serial.println("turn");
+    //Serial.println(robotData->robotTurn);
+    //Serial.wprintln("angle");
+    //Serial.println(robotData->robotAngle)
+
+  if (robotData->robotTurn == 0) {
+    robotData->robotTurn = 0;
+    rightWheelTick =0;
+    leftWheelTick =0;
+    analogWrite(LEFT_WHEEL_FORWARD, robotData->robotSpeed);
+    analogWrite(RIGHT_WHEEL_FORWARD, robotData->robotSpeed);
+  } else  if (robotData->robotTurn == 1) {
+    if (leftWheelTick < 500) {
+      analogWrite(LEFT_WHEEL_FORWARD, robotData->robotSpeed);
+      analogWrite(RIGHT_WHEEL_FORWARD, STOP);
+    } else {
+      robotData->robotTurn = 0;
+    }
+  } else if (robotData->robotTurn == -1) {
+    if (rightWheelTick < 500) {
+      analogWrite(LEFT_WHEEL_FORWARD, STOP);
+      analogWrite(RIGHT_WHEEL_FORWARD, robotData->robotSpeed);
+    }  else {
+      robotData->robotTurn = 0;
+      
+    }
+  }
 }
 
-void testFunction(){
-    //read and print RIGHT_WHEEL_IR_SENSOR_VALUE
-  Serial.println("RIGHT_WHEEL_IR_SENSOR_VALUE");
-  rightWheelValue = digitalRead(RIGHT_WHEEL_IR_SENSOR);   // read the input pin
-  Serial.println(rightWheelValue);
+// print matrix
+void printMatrix( const float matrix[][MATRIX_SIZE] ) {
+  // loop through array's rows
+  for ( int i = 0; i < MATRIX_SIZE; ++i ) {
+    // loop through columns of current row
+    for ( int j = 0; j < MATRIX_SIZE; ++j ) {
+      Serial.print (matrix[ i ][ j ] );
+      Serial.print (" " );
+    }
+    Serial.println (" " );
+  }
+  Serial.println (" " );
+}
 
-  //read and print LEFT_WHEEL_IR_SENSOR_VALUE
-  Serial.println("LEFT_WHEEL_IR_SENSOR_VALUE");
-  leftWheelValue = digitalRead(LEFT_WHEEL_IR_SENSOR);   // read the input pin
-  Serial.println(leftWheelValue);
+void transformRight(void) {
+  float resultMatrix[4][4] = {
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+  };
 
-  // read value ever 2 sec
-  //delay(2000);
+  //matrix multiplication
+  for (i = 0; i < MATRIX_SIZE; i++) {
+    for (j = 0; j < MATRIX_SIZE; j++) {
+      resultMatrix[i][j] = 0;
+      for (k = 0; k < MATRIX_SIZE; k++) {
+        temp1 = transformMatrix[i][k];
+        temp2 = transformMatrixRight[k][j];
+        resultMatrix[i][j] += temp1 * temp2 ;
+      }
+    }
+  }
+  // assign transform to global transform
+  for (i = 0; i < MATRIX_SIZE; i++) {
+    for (j = 0; j < MATRIX_SIZE; j++) {
+      transformMatrix[i][j] = resultMatrix[i][j];
+    }
+  }
+}
+
+void transformLeft(void) {
+  float resultMatrix[4][4] = {
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+    {0, 0, 0, 0},
+  };
+
+  //matrix multiplication
+  for (i = 0; i < MATRIX_SIZE; i++) {
+    for (j = 0; j < MATRIX_SIZE; j++) {
+      resultMatrix[i][j] = 0;
+      for (k = 0; k < MATRIX_SIZE; k++) {
+        temp1 = transformMatrix[i][k];
+        temp2 = transformMatrixLeft[k][j];
+        resultMatrix[i][j] += temp1 * temp2 ;
+      }
+    }
+  }
+  // assign transform to global transform
+  for (i = 0; i < MATRIX_SIZE; i++) {
+    for (j = 0; j < MATRIX_SIZE; j++) {
+      transformMatrix[i][j] = resultMatrix[i][j];
+    }
+  }
+  Serial.println ("netTransformMatrix" );
+  printMatrix(transformMatrix);
+}
+
+void leftWheelInterrupt() {
+  leftWheelTick++;
+  transformLeft;
+}
+
+void rightWheelInterrupt() {
+  rightWheelTick++;
+  transformRight;
+}
+
+void orientRobot(){
+  
+}
+
+void initializePorts() {
+  //intialize serial console
+  Serial.begin(9600);
+
+  //initialize IRsensors
+  pinMode(RIGHT_WHEEL_IR_SENSOR, INPUT_PULLUP);
+  pinMode(LEFT_WHEEL_IR_SENSOR, INPUT_PULLUP);
+
+  // initialize wheels
+  pinMode(LEFT_WHEEL_FORWARD, OUTPUT);
+  pinMode(LEFT_WHEEL_REVERSE, OUTPUT);
+  pinMode(RIGHT_WHEEL_FORWARD, OUTPUT);
+  pinMode(RIGHT_WHEEL_REVERSE, OUTPUT);
+
+  //Stop robot
+  analogWrite(LEFT_WHEEL_REVERSE, STOP);
+  analogWrite(RIGHT_WHEEL_REVERSE, STOP);
+  analogWrite(LEFT_WHEEL_FORWARD, STOP);
+  analogWrite(RIGHT_WHEEL_FORWARD, STOP);
+
+  // set innterupts for IR sensors
+  attachInterrupt(digitalPinToInterrupt(RIGHT_WHEEL_IR_SENSOR), leftWheelInterrupt, RISING); // attach interupt to a function
+  attachInterrupt(digitalPinToInterrupt(LEFT_WHEEL_IR_SENSOR), rightWheelInterrupt, RISING); // attach interupt to a function
+
+  // compass
+  Wire.begin();
+  compass.init();
+  compass.enableDefault();
+
+  compass.m_min = (LSM303::vector<int16_t>){+32767, +32767, +32767};
+  compass.m_max = (LSM303::vector<int16_t>){-32767, -32767, -32767};
+}
+
+void compassReading(){
+  compass.read();
+  float heading = compass.heading();
+  Serial.println(heading);
+}
+
+//test function
+void testFunction() {
+
+  driveRobot();
+  
+
+  
 }
 #endif
