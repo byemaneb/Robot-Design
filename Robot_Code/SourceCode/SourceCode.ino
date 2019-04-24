@@ -21,7 +21,7 @@ void loop() {
  // while (counter < 190) {
     readUDP();
     testFunction();
-    
+    //compassReading();
     //counter++;
     //Serial.println ("counter " );
     //Serial.println (counter );

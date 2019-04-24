@@ -3,6 +3,8 @@
 #include <SPI.h>
 #include <WiFi101.h>
 #include <WiFiUdp.h>
+#include <Wire.h>
+#include <LSM303.h>
 
 #define SECRET_SSID "Berket"
 #define SECRET_PASS "Berket12"
@@ -18,8 +20,8 @@
 #define STOP 0
 
 // use for matrix multiplication
-#define ROBOT_WIDTH 100     //length between wheels
-#define WHEEL_RADIUS 20    // wheel radius in cm
+#define ROBOT_WIDTH 95     //length between wheels
+#define WHEEL_RADIUS 15    // wheel radius in cm
 #define TICKS_PER_ROTATION 150   // gear ratio relavent to output shaft
 #define REFRESH_TIME 1000     // amount of time to capture the number of ticks (ms)
 #define PI 3.1415926535897932384626433832795    // Pie
@@ -127,6 +129,7 @@ float west = (90 / 360)* 2 * PI;
 
 float currentRotationAngle = 0;
 
+LSM303 compass;
 /////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -227,8 +230,8 @@ void readUDP() {
 void driveRobot() {
    // Serial.println("speed");
     //Serial.println(robotData->robotSpeed);
-    Serial.println("turn");
-    Serial.println(robotData->robotTurn);
+    //Serial.println("turn");
+    //Serial.println(robotData->robotTurn);
     //Serial.wprintln("angle");
     //Serial.println(robotData->robotAngle)
 
@@ -239,14 +242,14 @@ void driveRobot() {
     analogWrite(LEFT_WHEEL_FORWARD, robotData->robotSpeed);
     analogWrite(RIGHT_WHEEL_FORWARD, robotData->robotSpeed);
   } else  if (robotData->robotTurn == 1) {
-    if (leftWheelTick < 200) {
+    if (leftWheelTick < 500) {
       analogWrite(LEFT_WHEEL_FORWARD, robotData->robotSpeed);
       analogWrite(RIGHT_WHEEL_FORWARD, STOP);
     } else {
       robotData->robotTurn = 0;
     }
   } else if (robotData->robotTurn == -1) {
-    if (rightWheelTick < 200) {
+    if (rightWheelTick < 500) {
       analogWrite(LEFT_WHEEL_FORWARD, STOP);
       analogWrite(RIGHT_WHEEL_FORWARD, robotData->robotSpeed);
     }  else {
@@ -322,16 +325,18 @@ void transformLeft(void) {
       transformMatrix[i][j] = resultMatrix[i][j];
     }
   }
+  Serial.println ("netTransformMatrix" );
+  printMatrix(transformMatrix);
 }
 
 void leftWheelInterrupt() {
   leftWheelTick++;
-  //transformLeft;
+  transformLeft;
 }
 
 void rightWheelInterrupt() {
   rightWheelTick++;
-  //transformRight;
+  transformRight;
 }
 
 void orientRobot(){
@@ -362,6 +367,19 @@ void initializePorts() {
   attachInterrupt(digitalPinToInterrupt(RIGHT_WHEEL_IR_SENSOR), leftWheelInterrupt, RISING); // attach interupt to a function
   attachInterrupt(digitalPinToInterrupt(LEFT_WHEEL_IR_SENSOR), rightWheelInterrupt, RISING); // attach interupt to a function
 
+  // compass
+  Wire.begin();
+  compass.init();
+  compass.enableDefault();
+
+  compass.m_min = (LSM303::vector<int16_t>){+32767, +32767, +32767};
+  compass.m_max = (LSM303::vector<int16_t>){-32767, -32767, -32767};
+}
+
+void compassReading(){
+  compass.read();
+  float heading = compass.heading();
+  Serial.println(heading);
 }
 
 //test function
@@ -369,8 +387,7 @@ void testFunction() {
 
   driveRobot();
   
-    Serial.println ("netTransformMatrix" );
-    printMatrix(transformMatrix);
+
   
 }
 #endif
