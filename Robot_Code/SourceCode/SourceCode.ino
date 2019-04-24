@@ -5,7 +5,7 @@ int counter = 0;
 
 void setup() {
   // put your setup code here, to run once:
- // connectWifi();
+  connectWifi();
   initializePorts();
 
 }
@@ -18,12 +18,13 @@ void loop() {
     timeTock = timeCurrent - timeTick;
     }
   */
-  while (counter < 190) {
-    //readUDP();
+ // while (counter < 190) {
+    readUDP();
     testFunction();
-    counter++;
-    Serial.println ("counter " );
-    Serial.println (counter );
+    
+    //counter++;
+    //Serial.println ("counter " );
+    //Serial.println (counter );
     delay(100);
-  }
+  //}
 }

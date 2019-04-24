@@ -7,13 +7,13 @@
 #define SECRET_SSID "Berket"
 #define SECRET_PASS "Berket12"
 
-#define RIGHT_WHEEL_IR_SENSOR 15
-#define LEFT_WHEEL_IR_SENSOR 16
+#define RIGHT_WHEEL_IR_SENSOR 16
+#define LEFT_WHEEL_IR_SENSOR 15
 
-#define LEFT_WHEEL_FORWARD 11
-#define LEFT_WHEEL_REVERSE 10
-#define RIGHT_WHEEL_FORWARD 13
-#define RIGHT_WHEEL_REVERSE 12
+#define LEFT_WHEEL_FORWARD 10
+#define LEFT_WHEEL_REVERSE 11
+#define RIGHT_WHEEL_FORWARD 12
+#define RIGHT_WHEEL_REVERSE 13
 #define ANGLE 115
 #define STOP 0
 
@@ -24,6 +24,8 @@
 #define REFRESH_TIME 1000     // amount of time to capture the number of ticks (ms)
 #define PI 3.1415926535897932384626433832795    // Pie
 #define MATRIX_SIZE 4
+
+
 
 
 /*SBC: Code for raspberry Pi
@@ -72,6 +74,7 @@ WiFiUDP Udp;
 // this will be the data structure used to store all our data
 struct dataStructure {
   float robotSpeed = 0;
+  float robotTurn = 0;
   float robotAngle = 0;
 };
 
@@ -116,6 +119,13 @@ float transformMatrix[4][4] = {
   {0, 0, 0, 1},
 };
 
+// compass
+float north = (0 / 360)* 2 * PI;
+float south = (180 / 360)* 2 * PI;
+float east = (360 / 360)* 2 * PI;
+float west = (90 / 360)* 2 * PI;
+
+float currentRotationAngle = 0;
 
 /////////////////////////////////////////////////////////////////////////////////////
 
@@ -191,9 +201,11 @@ void readUDP() {
     robotData  = (dataStructure*)packetBuffer;
     Udp.read( (char *) robotData, sizeof( robotData));      // read the data packet
 
-    Serial.println("variable 1");
+    Serial.println("speed");
     Serial.println(robotData->robotSpeed);
-    Serial.println("variable 2");
+    Serial.println("turn");
+    Serial.println(robotData->robotTurn);
+    Serial.println("angle");
     Serial.println(robotData->robotAngle);
 
     if (len > 0) packetBuffer[len] = 0;
@@ -206,64 +218,42 @@ void readUDP() {
 }
 
 
-void leftWheelInterrupt() {
-  leftWheelTick++;
-}
 
-void rightWheelInterrupt() {
-  rightWheelTick++;
-}
 
-void initializePorts() {
-  //intialize serial console
-  Serial.begin(9600);
 
-  //initialize IRsensors
-  pinMode(RIGHT_WHEEL_IR_SENSOR, INPUT_PULLUP);
-  pinMode(LEFT_WHEEL_IR_SENSOR, INPUT_PULLUP);
 
-  // initialize wheels
-  pinMode(LEFT_WHEEL_FORWARD, OUTPUT);
-  pinMode(LEFT_WHEEL_REVERSE, OUTPUT);
-  pinMode(RIGHT_WHEEL_FORWARD, OUTPUT);
-  pinMode(RIGHT_WHEEL_REVERSE, OUTPUT);
+// this will either drive the Robot forward, left or right or stop
 
-  //Stop robot
-  analogWrite(LEFT_WHEEL_REVERSE, STOP);
-  analogWrite(RIGHT_WHEEL_REVERSE, STOP);
-  analogWrite(LEFT_WHEEL_FORWARD, STOP);
-  analogWrite(RIGHT_WHEEL_FORWARD, STOP);
-
-  // set innterupts for IR sensors
-  attachInterrupt(digitalPinToInterrupt(RIGHT_WHEEL_IR_SENSOR), leftWheelInterrupt, RISING); // attach interupt to a function
-  attachInterrupt(digitalPinToInterrupt(LEFT_WHEEL_IR_SENSOR), rightWheelInterrupt, RISING); // attach interupt to a function
-
-}
-
-// this will either drive the Robot forward, reverse or stop
 void driveRobot() {
-  if (robotDirection == 1) {
-    //drive both wheels forward
-    analogWrite(LEFT_WHEEL_REVERSE, STOP);
-    analogWrite(RIGHT_WHEEL_REVERSE, STOP);
-    analogWrite(LEFT_WHEEL_FORWARD, ANGLE);
-    analogWrite(RIGHT_WHEEL_FORWARD, ANGLE);
-  } else if (robotDirection == -1) {
+   // Serial.println("speed");
+    //Serial.println(robotData->robotSpeed);
+    Serial.println("turn");
+    Serial.println(robotData->robotTurn);
+    //Serial.wprintln("angle");
+    //Serial.println(robotData->robotAngle)
 
-    //drive both wheels reverse
-    analogWrite(LEFT_WHEEL_FORWARD, STOP);
-    analogWrite(RIGHT_WHEEL_FORWARD, STOP);
-    analogWrite(LEFT_WHEEL_REVERSE, ANGLE);
-    analogWrite(RIGHT_WHEEL_REVERSE, ANGLE);
-  } else {
-
-    //Stop robot
-    analogWrite(LEFT_WHEEL_REVERSE, STOP);
-    analogWrite(RIGHT_WHEEL_REVERSE, STOP);
-    analogWrite(LEFT_WHEEL_FORWARD, STOP);
-    analogWrite(RIGHT_WHEEL_FORWARD, STOP);
+  if (robotData->robotTurn == 0) {
+    robotData->robotTurn = 0;
+    rightWheelTick =0;
+    leftWheelTick =0;
+    analogWrite(LEFT_WHEEL_FORWARD, robotData->robotSpeed);
+    analogWrite(RIGHT_WHEEL_FORWARD, robotData->robotSpeed);
+  } else  if (robotData->robotTurn == 1) {
+    if (leftWheelTick < 200) {
+      analogWrite(LEFT_WHEEL_FORWARD, robotData->robotSpeed);
+      analogWrite(RIGHT_WHEEL_FORWARD, STOP);
+    } else {
+      robotData->robotTurn = 0;
+    }
+  } else if (robotData->robotTurn == -1) {
+    if (rightWheelTick < 200) {
+      analogWrite(LEFT_WHEEL_FORWARD, STOP);
+      analogWrite(RIGHT_WHEEL_FORWARD, robotData->robotSpeed);
+    }  else {
+      robotData->robotTurn = 0;
+      
+    }
   }
-
 }
 
 // print matrix
@@ -334,11 +324,53 @@ void transformLeft(void) {
   }
 }
 
+void leftWheelInterrupt() {
+  leftWheelTick++;
+  //transformLeft;
+}
+
+void rightWheelInterrupt() {
+  rightWheelTick++;
+  //transformRight;
+}
+
+void orientRobot(){
+  
+}
+
+void initializePorts() {
+  //intialize serial console
+  Serial.begin(9600);
+
+  //initialize IRsensors
+  pinMode(RIGHT_WHEEL_IR_SENSOR, INPUT_PULLUP);
+  pinMode(LEFT_WHEEL_IR_SENSOR, INPUT_PULLUP);
+
+  // initialize wheels
+  pinMode(LEFT_WHEEL_FORWARD, OUTPUT);
+  pinMode(LEFT_WHEEL_REVERSE, OUTPUT);
+  pinMode(RIGHT_WHEEL_FORWARD, OUTPUT);
+  pinMode(RIGHT_WHEEL_REVERSE, OUTPUT);
+
+  //Stop robot
+  analogWrite(LEFT_WHEEL_REVERSE, STOP);
+  analogWrite(RIGHT_WHEEL_REVERSE, STOP);
+  analogWrite(LEFT_WHEEL_FORWARD, STOP);
+  analogWrite(RIGHT_WHEEL_FORWARD, STOP);
+
+  // set innterupts for IR sensors
+  attachInterrupt(digitalPinToInterrupt(RIGHT_WHEEL_IR_SENSOR), leftWheelInterrupt, RISING); // attach interupt to a function
+  attachInterrupt(digitalPinToInterrupt(LEFT_WHEEL_IR_SENSOR), rightWheelInterrupt, RISING); // attach interupt to a function
+
+}
+
 //test function
 void testFunction() {
-transformRight();
-transformLeft();
-Serial.println ("netTransformMatrix" );
-printMatrix(transformMatrix);
+
+  driveRobot();
+  
+    Serial.println ("netTransformMatrix" );
+    printMatrix(transformMatrix);
+  
 }
 #endif
