@@ -14,8 +14,9 @@ sock.bind((UDP_IP, UDP_PORT))
 while True:
 	data,addr = sock.recvfrom(1024) # buffer size is 1024 bytes
 
-	print("speed",struct.unpack("@fff",data))
-	#print("angle",turn)
-	#print("angle",angle)
+	speed,angle = struct.unpack("@fff",data)
+	#print("speed",struct.unpack("@fff",data))
+	print("speed",speed)
+	print("angle",angle)
 	
 	
