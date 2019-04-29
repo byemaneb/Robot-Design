@@ -27,16 +27,24 @@ int keyIndex = 0;            // your network key Index number (needed only for W
 unsigned int localPort = 5005;      // local port to listen on
 
 char packetBuffer[255]; //buffer to hold incoming packet
+char sendBuffer[255]; //buffer to hold incoming packet
 char  ReplyBuffer[] = "acknowledged";       // a string to send back
 
 WiFiUDP Udp;
 
-struct received {
+struct receivedData {
   float pwm1;
   float pwm2;
 };
 
-received *test;
+receivedData *dataIn;
+
+struct sentData {
+  float pwm1 = 23;
+  float pwm2 = 52;
+};
+
+sentData *dataOut;
 void setup() {
   //Configure pins for Adafruit ATWINC1500 Feather
   WiFi.setPins(8, 7, 4, 2);
@@ -89,22 +97,30 @@ void loop() {
     // read the packet into packetBufffer
     int len = Udp.read(packetBuffer, 512);
 
-    test  = (received*)packetBuffer;
-    Udp.read( (char *) test, sizeof( test));      // read the data packet
+    dataIn  = (receivedData*)packetBuffer;
+    Udp.read( (byte *) &dataIn, 8);      // read the data packet
 
+    //print incoming values
     Serial.println("variable 1");
-    Serial.println(test->pwm1);
+    Serial.println(dataIn->pwm1);
     Serial.println("variable 2");
-    Serial.println(test->pwm2);
+    Serial.println(dataIn->pwm2);
 
     if (len > 0) packetBuffer[len] = 0;
 
 
 
+    // this is the reply buffer that will be sent back to the omputer
+    dataOut  = (sentData*)sendBuffer;
 
+    //assign new values for the send out structure
+    dataOut->pwm1 = 23;
+    dataOut->pwm2 = 53;
+    
     // send a reply, to the IP address and port that sent us the packet we received
     Udp.beginPacket(Udp.remoteIP(), 5005);
-    Udp.write(ReplyBuffer);
+
+    Udp.write((byte *)dataOut, 8);
     Udp.endPacket();
   }
 }
