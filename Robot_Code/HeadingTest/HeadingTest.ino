@@ -21,10 +21,10 @@ void setup() {
   compass.enableDefault();
 
   compass.m_min = (LSM303::vector<int16_t>) {
-    -2401, -2064, -2877
+    -2087, -1879, -2513
   };
   compass.m_max = (LSM303::vector<int16_t>) {
-    +3344, +3881, +3574
+    +3111, +3651, +3437
   };
 
 }
@@ -50,32 +50,74 @@ void loop() {
   */
 
   switch (state) {
-    case 1:
-      // recieve and convert user input
-      if (Serial.available() > 0) {
-        desiredAngle = Convert();
-        state = 2;
-      }
-      1break;
-    case 2:
+    case 0:
 
+      analogWrite(LEFT_WHEEL_FORWARD, 0);
+      analogWrite(RIGHT_WHEEL_FORWARD, 0);
+      delay(5000);
+      state++;
+      break;
+    case 1:
+      desiredAngle = 270;
       if ((int(heading) > (desiredAngle + OFFSET)) || (int(heading) < (desiredAngle - OFFSET))) {
         analogWrite(LEFT_WHEEL_FORWARD, 0);
         analogWrite(RIGHT_WHEEL_FORWARD, 100);
 
-      } else {270
-        state = 3;
+      } else {
+        analogWrite(LEFT_WHEEL_FORWARD, 0);
+        analogWrite(RIGHT_WHEEL_FORWARD, 0);
+        delay(5000);
+        state++;
       }
       break;
+    case 2:
+      desiredAngle = 90;
+      if ((int(heading) > (desiredAngle + OFFSET)) || (int(heading) < (desiredAngle - OFFSET))) {
+        analogWrite(LEFT_WHEEL_FORWARD, 0);
+        analogWrite(RIGHT_WHEEL_FORWARD, 100);
 
-    case 3:
-      analogWrite(LEFT_WHEEL_FORWARD, 0);
-      analogWrite(RIGHT_WHEEL_FORWARD, 0);
-      delay(5000);
-      state = 1;
+      } else {
+        analogWrite(LEFT_WHEEL_FORWARD, 0);
+        analogWrite(RIGHT_WHEEL_FORWARD, 0);
+        delay(5000);
+        state++;
+      }
       break;
-    default:
-      // statements
+    case 3:
+      desiredAngle = 0;
+      if ((int(heading) > (desiredAngle + OFFSET)) || (int(heading) < (desiredAngle - OFFSET))) {
+        analogWrite(LEFT_WHEEL_FORWARD, 0);
+        analogWrite(RIGHT_WHEEL_FORWARD, 100);
+
+      } else {
+        analogWrite(LEFT_WHEEL_FORWARD, 0);
+        analogWrite(RIGHT_WHEEL_FORWARD, 0);
+        delay(5000);
+        state++;
+      }
+      break;
+    case 4:
+      desiredAngle = 180;
+      if ((int(heading) > (desiredAngle + OFFSET)) || (int(heading) < (desiredAngle - OFFSET))) {
+        analogWrite(LEFT_WHEEL_FORWARD, 0);
+        analogWrite(RIGHT_WHEEL_FORWARD, 100);
+
+      } else {
+        analogWrite(LEFT_WHEEL_FORWARD, 0);
+        analogWrite(RIGHT_WHEEL_FORWARD, 0);
+        delay(5000);
+        state++;
+      }
+      break;
+    case 5:
+      desiredAngle = 270;
+      if ((int(heading) > (desiredAngle + OFFSET)) || (int(heading) < (desiredAngle - OFFSET))) {
+        analogWrite(LEFT_WHEEL_FORWARD, 0);
+        analogWrite(RIGHT_WHEEL_FORWARD, 100);
+
+      } else {
+        state = 0;
+      }
       break;
   }
 
