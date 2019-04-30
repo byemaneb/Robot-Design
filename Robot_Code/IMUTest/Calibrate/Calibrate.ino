@@ -2,7 +2,7 @@
 #include <LSM303.h>
 
 LSM303 compass;
-LSM303::vector<int16_t> running_min = {32767, 32767, 32767}, running_max = {-32768, -32768, -32768};
+LSM303::vector<int16_t> running_min = {-1646, -1043, -1803}, running_max = {+2603, +3041, +2734};
 
 char report[80];
 
