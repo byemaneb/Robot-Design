@@ -31,10 +31,10 @@ void setup() {
   compass.enableDefault();
 
   compass.m_min = (LSM303::vector<int16_t>) {
-    -2401, -2064, -2877
+    -2087, -1879, -2513
   };
   compass.m_max = (LSM303::vector<int16_t>) {
-    +3344, +3881, +3574
+    +3111, +3651, +3437
   };
 
   memset (timeWindow, 0, sizeof(timeWindow));
@@ -64,7 +64,7 @@ switch (state) {
     analogWrite(LEFT_WHEEL_FORWARD, 0);
     analogWrite(RIGHT_WHEEL_FORWARD, 0);
     
-    delay(3000);
+    delay(5000);
     memset (timeWindow, 0, sizeof(timeWindow));
     state = 1;
     break;
