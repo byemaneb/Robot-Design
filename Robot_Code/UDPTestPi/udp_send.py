@@ -10,9 +10,10 @@ print ("UDP target IP:", UDP_IP)
 print ("UDP target port:", UDP_PORT)
 
 
-speed = 115
+speed = 0
 turn = 0
 angle = 0
+returnData = False
 
 while True:
 	#recieve user data
@@ -24,8 +25,8 @@ while True:
 	if key == "w":
 		speed += 10
 		
-		if speed < 115:
-			speed = 115 
+		if speed < 50:
+			speed = 50 
 		
 		if speed > 255:
 			speed = 255 
@@ -33,7 +34,7 @@ while True:
 	elif key == "s":
 		speed -= 10
 		
-		if speed < 115:
+		if speed < 50:
 			speed = 0 
 
 	elif key == "d":
@@ -51,18 +52,23 @@ while True:
 		angle = 270
 	elif key == " ":
 		speed = 0
+	elif key == "q":
+		returnData = True	
 		
 	print("speed", speed)
 	print("turn ", turn)
 	print("angle ", angle)
+	print("returnData",returnData)
 
 
 	#pack and send out UDP packet
-	sendOut = struct.pack("@fff",speed,turn,angle)
+	sendOut = struct.pack("@fff?",speed,turn,angle,returnData)
 	sock = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
 	sock.sendto(sendOut, (UDP_IP, UDP_PORT))
 	
 	turn = 0
+	angle = 0
+	returnData = False
 
 
 
