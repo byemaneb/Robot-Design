@@ -33,18 +33,25 @@ char  ReplyBuffer[] = "acknowledged";       // a string to send back
 WiFiUDP Udp;
 
 struct receivedData {
-  float pwm1;
-  float pwm2;
+  float robotSpeed;
+  float robotTurn;
+  float robotAngle;
 };
 
 receivedData *dataIn;
 
-struct sentData {
-  float pwm1 = 23;
-  float pwm2 = 52;
+struct sendData {
+  float robotSpeed = 0;
+  float robotTurn = 0;
+  float robotAngle = 0;
+  float xPosition = 0;
+  float yPosition = 0;
+  float globalAngle = 0;
 };
 
-sentData *dataOut;
+sendData *dataOut;
+//test variables
+
 void setup() {
   //Configure pins for Adafruit ATWINC1500 Feather
   WiFi.setPins(8, 7, 4, 2);
@@ -102,26 +109,27 @@ void loop() {
 
     //print incoming values
     Serial.println("variable 1");
-    Serial.println(dataIn->pwm1);
+    Serial.println(dataIn->robotSpeed);
     Serial.println("variable 2");
-    Serial.println(dataIn->pwm2);
+    Serial.println(dataIn->robotTurn);
 
     if (len > 0) packetBuffer[len] = 0;
 
 
 
-    // this is the reply buffer that will be sent back to the omputer
-    dataOut  = (sentData*)sendBuffer;
+  dataOut  = (sendData*)sendBuffer;
 
-    //assign new values for the send out structure
-    dataOut->pwm1 = 23;
-    dataOut->pwm2 = 53;
-    
-    // send a reply, to the IP address and port that sent us the packet we received
-    Udp.beginPacket(Udp.remoteIP(), 5005);
+  dataOut->robotSpeed = dataIn->robotSpeed;
+  dataOut->robotTurn = dataIn->robotTurn;
+  dataOut->robotAngle = dataIn->robotAngle;
+  dataOut->xPosition = 34;
+  dataOut->yPosition = 25;
+  dataOut->globalAngle = 0;
 
-    Udp.write((byte *)dataOut, 8);
-    Udp.endPacket();
+  Udp.beginPacket(Udp.remoteIP(), 5005);
+
+  Udp.write((byte*)dataOut, sizeof( sendData));
+  Udp.endPacket();
   }
 }
 
