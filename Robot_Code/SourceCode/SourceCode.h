@@ -83,6 +83,16 @@ struct dataStructure {
 // create an instance of the data structure
 dataStructure *robotData;
 
+struct systemStruct {
+  float robotSpeed = 0;
+  float robotTurn = 0;
+  float robotAngle = 0;
+  //float xPosition = 0;
+  //float yPosition = 0;
+  //float globalAngle = 0;
+};
+
+systemStruct *systemData;
 //test variables
 int rightWheelValue = 0;
 int leftWheelValue = 0;
@@ -122,10 +132,10 @@ float transformMatrix[4][4] = {
 };
 
 // compass
-float north = (0 / 360)* 2 * PI;
-float south = (180 / 360)* 2 * PI;
-float east = (360 / 360)* 2 * PI;
-float west = (90 / 360)* 2 * PI;
+float north = (0 / 360) * 2 * PI;
+float south = (180 / 360) * 2 * PI;
+float east = (360 / 360) * 2 * PI;
+float west = (90 / 360) * 2 * PI;
 
 float currentRotationAngle = 0;
 
@@ -204,41 +214,34 @@ void readUDP() {
     robotData  = (dataStructure*)packetBuffer;
     Udp.read( (char *) robotData, sizeof( robotData));      // read the data packet
 
-    Serial.println("speed");
-    Serial.println(robotData->robotSpeed);
-    Serial.println("turn");
-    Serial.println(robotData->robotTurn);
-    Serial.println("angle");
-    Serial.println(robotData->robotAngle);
 
     if (len > 0) packetBuffer[len] = 0;
+    
 
-    // send a reply, to the IP address and port that sent us the packet we received
+//    systemData->xPosition = 5;
+ //   systemData->yPosition = 5;
+  //  systemData->globalAngle = 5;
+
     Udp.beginPacket(Udp.remoteIP(), 5005);
-    Udp.write(ReplyBuffer);
+    //Udp.write((uint8_t*)systemData, 12);
     Udp.endPacket();
   }
 }
 
-
-
-
-
-
 // this will either drive the Robot forward, left or right or stop
 
 void driveRobot() {
-   // Serial.println("speed");
-    //Serial.println(robotData->robotSpeed);
-    //Serial.println("turn");
-    //Serial.println(robotData->robotTurn);
-    //Serial.wprintln("angle");
-    //Serial.println(robotData->robotAngle)
+  // Serial.println("speed");
+  //Serial.println(robotData->robotSpeed);
+  //Serial.println("turn");
+  //Serial.println(robotData->robotTurn);
+  //Serial.wprintln("angle");
+  //Serial.println(robotData->robotAngle)
 
   if (robotData->robotTurn == 0) {
     robotData->robotTurn = 0;
-    rightWheelTick =0;
-    leftWheelTick =0;
+    rightWheelTick = 0;
+    leftWheelTick = 0;
     analogWrite(LEFT_WHEEL_FORWARD, robotData->robotSpeed);
     analogWrite(RIGHT_WHEEL_FORWARD, robotData->robotSpeed);
   } else  if (robotData->robotTurn == 1) {
@@ -254,7 +257,7 @@ void driveRobot() {
       analogWrite(RIGHT_WHEEL_FORWARD, robotData->robotSpeed);
     }  else {
       robotData->robotTurn = 0;
-      
+
     }
   }
 }
@@ -273,12 +276,14 @@ void printMatrix( const float matrix[][MATRIX_SIZE] ) {
   Serial.println (" " );
 }
 
-void transformRight(void) {
+void rightWheelInterrupt(void) {
+  rightWheelTick++;
   float resultMatrix[4][4] = {
     {0, 0, 0, 0},
     {0, 0, 0, 0},
     {0, 0, 0, 0},
     {0, 0, 0, 0},
+
   };
 
   //matrix multiplication
@@ -300,7 +305,8 @@ void transformRight(void) {
   }
 }
 
-void transformLeft(void) {
+void leftWheelInterrupt(void) {
+  leftWheelTick++;
   float resultMatrix[4][4] = {
     {0, 0, 0, 0},
     {0, 0, 0, 0},
@@ -325,24 +331,25 @@ void transformLeft(void) {
       transformMatrix[i][j] = resultMatrix[i][j];
     }
   }
-  Serial.println ("netTransformMatrix" );
-  printMatrix(transformMatrix);
 }
 
-void leftWheelInterrupt() {
-  leftWheelTick++;
-  transformLeft;
-}
+void updateData() {
+  systemData->robotSpeed = 1;
+  systemData->robotTurn = 2;
+  systemData->robotAngle = 3;
+//  systemData->xPosition = 5;
+  //systemData->yPosition = 5;
+  //systemData->globalAngle = 5;
 
-void rightWheelInterrupt() {
-  rightWheelTick++;
-  transformRight;
 }
-
-void orientRobot(){
-  
+void orientRobot() {
 }
-
+void outputUDP() {
+  // send a reply, to the IP address and port that sent us the packet we received
+  Udp.beginPacket(Udp.remoteIP(), 5005);
+  Udp.write((uint8_t*)systemData, 12);
+  Udp.endPacket();
+}
 void initializePorts() {
   //intialize serial console
   Serial.begin(9600);
@@ -372,22 +379,18 @@ void initializePorts() {
   compass.init();
   compass.enableDefault();
 
-  compass.m_min = (LSM303::vector<int16_t>){+32767, +32767, +32767};
-  compass.m_max = (LSM303::vector<int16_t>){-32767, -32767, -32767};
+  compass.m_min = (LSM303::vector<int16_t>) {
+    +32767, +32767, +32767
+  };
+  compass.m_max = (LSM303::vector<int16_t>) {
+    -32767, -32767, -32767
+  };
 }
-
-void compassReading(){
+void compassReading() {
   compass.read();
   float heading = compass.heading();
   Serial.println(heading);
 }
 
-//test function
-void testFunction() {
 
-  driveRobot();
-  
-
-  
-}
 #endif

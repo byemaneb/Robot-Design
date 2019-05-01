@@ -18,13 +18,26 @@ void loop() {
     timeTock = timeCurrent - timeTick;
     }
   */
- // while (counter < 190) {
-    readUDP();
-    testFunction();
-    //compassReading();
-    //counter++;
-    //Serial.println ("counter " );
-    //Serial.println (counter );
-    delay(100);
-  //}
+
+  readUDP();
+  driveRobot();
+  /*
+  systemData->robotSpeed = 1;
+  systemData->robotTurn = 2;
+  systemData->robotAngle = 3;
+
+  Serial.println ("robotSpeed" );
+  Serial.println(systemData->robotSpeed);
+    Serial.println ("robotTurn" );
+  Serial.println(systemData->robotTurn);
+    Serial.println ("robotAngle" );
+  Serial.println(systemData->robotAngle);
+  */
+  //updateData();
+  //outputUDP();
+  //Serial.println ("netTransformMatrix" );
+  //Serial.println(systemData->robotSpeed);
+  //printMatrix(transformMatrix);
+  delay(100);
+
 }

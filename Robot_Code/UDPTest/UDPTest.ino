@@ -27,16 +27,31 @@ int keyIndex = 0;            // your network key Index number (needed only for W
 unsigned int localPort = 5005;      // local port to listen on
 
 char packetBuffer[255]; //buffer to hold incoming packet
+char sendBuffer[255]; //buffer to hold incoming packet
 char  ReplyBuffer[] = "acknowledged";       // a string to send back
 
 WiFiUDP Udp;
 
-struct received {
-  float pwm1;
-  float pwm2;
+struct receivedData {
+  float robotSpeed;
+  float robotTurn;
+  float robotAngle;
 };
 
-received *test;
+receivedData *dataIn;
+
+struct sendData {
+  float robotSpeed = 0;
+  float robotTurn = 0;
+  float robotAngle = 0;
+  float xPosition = 0;
+  float yPosition = 0;
+  float globalAngle = 0;
+};
+
+sendData *dataOut;
+//test variables
+
 void setup() {
   //Configure pins for Adafruit ATWINC1500 Feather
   WiFi.setPins(8, 7, 4, 2);
@@ -89,23 +104,32 @@ void loop() {
     // read the packet into packetBufffer
     int len = Udp.read(packetBuffer, 512);
 
-    test  = (received*)packetBuffer;
-    Udp.read( (char *) test, sizeof( test));      // read the data packet
+    dataIn  = (receivedData*)packetBuffer;
+    Udp.read( (byte *) &dataIn, 8);      // read the data packet
 
+    //print incoming values
     Serial.println("variable 1");
-    Serial.println(test->pwm1);
+    Serial.println(dataIn->robotSpeed);
     Serial.println("variable 2");
-    Serial.println(test->pwm2);
+    Serial.println(dataIn->robotTurn);
 
     if (len > 0) packetBuffer[len] = 0;
 
 
 
+  dataOut  = (sendData*)sendBuffer;
 
-    // send a reply, to the IP address and port that sent us the packet we received
-    Udp.beginPacket(Udp.remoteIP(), 5005);
-    Udp.write(ReplyBuffer);
-    Udp.endPacket();
+  dataOut->robotSpeed = dataIn->robotSpeed;
+  dataOut->robotTurn = dataIn->robotTurn;
+  dataOut->robotAngle = dataIn->robotAngle;
+  dataOut->xPosition = 34;
+  dataOut->yPosition = 25;
+  dataOut->globalAngle = 0;
+
+  Udp.beginPacket(Udp.remoteIP(), 5005);
+
+  Udp.write((byte*)dataOut, sizeof( sendData));
+  Udp.endPacket();
   }
 }
 
