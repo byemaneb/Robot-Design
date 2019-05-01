@@ -43,13 +43,13 @@ while True:
 	elif key == "a":
 		turn = -1
 	elif key == "i":
-		angle = 0
-	elif key == "k":
-		angle = 180
-	elif key == "l":
-		angle = 90
-	elif key == "j":
 		angle = 270
+	elif key == "k":
+		angle = 90
+	elif key == "l":
+		angle = 360
+	elif key == "j":
+		angle = 180
 	elif key == " ":
 		speed = 0
 	elif key == "q":
