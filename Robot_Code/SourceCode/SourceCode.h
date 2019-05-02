@@ -27,8 +27,12 @@
 #define PI 3.1415926535897932384626433832795    // Pie
 #define MATRIX_SIZE 4
 
+//use for imu pickup
+#define TIMEWINDOWSIZE  50
+#define THRESHOLD 150
 
-
+//use for heading
+#define OFFSET  2
 
 /*SBC: Code for raspberry Pi
    connect2port()
@@ -70,30 +74,30 @@ int keyIndex = 0;            // your network key Index number (needed only for W
 //set up UDP port
 unsigned int localPort = 5005;      // local port to listen on
 char packetBuffer[255]; //buffer to hold incoming packet
+char sendBuffer[255]; //buffer to hold incoming packet
 char  ReplyBuffer[] = "acknowledged";       // a string to send back
 WiFiUDP Udp;
 
-// this will be the data structure used to store all our data
-struct dataStructure {
+struct receivedData {
+  float robotSpeed;
+  float robotTurn;
+  float robotAngle;
+  bool returnData;
+};
+
+receivedData *dataIn;
+
+struct sendData {
   float robotSpeed = 0;
   float robotTurn = 0;
   float robotAngle = 0;
+  float xPosition = 0;
+  float yPosition = 0;
+  float globalAngle = 0;
 };
 
-// create an instance of the data structure
-dataStructure *robotData;
-
-struct systemStruct {
-  float robotSpeed = 0;
-  float robotTurn = 0;
-  float robotAngle = 0;
-  //float xPosition = 0;
-  //float yPosition = 0;
-  //float globalAngle = 0;
-};
-
-systemStruct *systemData;
-//test variables
+sendData *dataOut;
+//use for driving
 int rightWheelValue = 0;
 int leftWheelValue = 0;
 int robotDirection = 0;
@@ -110,16 +114,34 @@ float yDistance = cos(phi) * robotRadius;
 float temp1, temp2;
 int i, j, k;
 
+
+// use for pick up
+
+char report[80];
+
+int long timeWindow[TIMEWINDOWSIZE]; // Time window array
+int long previousAcceleration = 0;  // used for setting window
+int long currentAcceleration = 0;  // used for setting window
+int long loggedTime = 0;  // used for setting window
+int i_w = 0;  // increment from time window
+int previousAverageAcceleration = 0;  // increment from time window
+int state = 0;
+
+bool pickup = false;
+
+// use for orientation
+float globalAngle = 0;
+
 float transformMatrixRight[4][4] = {
-  {cos(phi), -sin(phi), 0, xDistance},
-  {sin(phi), cos(phi), 0, yDistance},
+  {cos(phi), -sin(phi), 0, 0},
+  {sin(phi), cos(phi), 0, robotRadius},
   {0, 0, 0, 0},
   {0, 0, 0, 1},
 };
 
 float transformMatrixLeft[4][4] = {
-  {cos(-phi), -sin(-phi), 0, -xDistance},
-  {sin(-phi), cos(-phi), 0, -yDistance},
+  {cos(-phi), -sin(-phi), 0, 0},
+  {sin(-phi), cos(-phi), 0, -robotRadius},
   {0, 0, 0, 0},
   {0, 0, 0, 1},
 };
@@ -132,7 +154,7 @@ float transformMatrix[4][4] = {
 };
 
 // compass
-float north = (0 / 360) * 2 * PI;
+float north = 0 ;
 float south = (180 / 360) * 2 * PI;
 float east = (360 / 360) * 2 * PI;
 float west = (90 / 360) * 2 * PI;
@@ -141,7 +163,8 @@ float currentRotationAngle = 0;
 
 LSM303 compass;
 /////////////////////////////////////////////////////////////////////////////////////
-
+float xPosition = 0 ;
+float yPosition = 0;
 
 // print wifi details
 void printWiFiStatus() {
@@ -194,8 +217,25 @@ void connectWifi() {
   Udp.begin(localPort);
 }
 
+void outputUDP() {
+  dataOut  = (sendData*)sendBuffer;
+
+  dataOut->robotSpeed = dataIn->robotSpeed;
+  dataOut->robotTurn = dataIn->robotTurn;
+  dataOut->robotAngle = dataIn->robotAngle;
+  dataOut->xPosition = transformMatrix[0][3];
+  dataOut->yPosition = transformMatrix[1][3];
+  dataOut->globalAngle = globalAngle;
+
+  Udp.beginPacket(Udp.remoteIP(), 5005);
+
+  Udp.write((byte*)dataOut, sizeof( sendData));
+  Udp.endPacket();
+}
+
 //  this will read and parse the incoming data
 void readUDP() {
+
   // if there's data available, read a packet
   int packetSize = Udp.parsePacket();
   if (packetSize)
@@ -211,52 +251,46 @@ void readUDP() {
     // read the packet into packetBufffer
     int len = Udp.read(packetBuffer, 512);
 
-    robotData  = (dataStructure*)packetBuffer;
-    Udp.read( (char *) robotData, sizeof( robotData));      // read the data packet
+    dataIn  = (receivedData*)packetBuffer;
+    Udp.read( (byte *) &dataIn, 8);      // read the data packet
 
+    //print incoming values
+    Serial.println("variable 1");
+    Serial.println(dataIn->robotSpeed);
+    Serial.println("variable 2");
+    Serial.println(dataIn->robotTurn);
 
     if (len > 0) packetBuffer[len] = 0;
-    
 
-//    systemData->xPosition = 5;
- //   systemData->yPosition = 5;
-  //  systemData->globalAngle = 5;
-
-    Udp.beginPacket(Udp.remoteIP(), 5005);
-    //Udp.write((uint8_t*)systemData, 12);
-    Udp.endPacket();
+    if ((dataIn->returnData) == true) {
+      outputUDP();
+      dataIn->returnData = false;
+    }
   }
 }
 
 // this will either drive the Robot forward, left or right or stop
 
 void driveRobot() {
-  // Serial.println("speed");
-  //Serial.println(robotData->robotSpeed);
-  //Serial.println("turn");
-  //Serial.println(robotData->robotTurn);
-  //Serial.wprintln("angle");
-  //Serial.println(robotData->robotAngle)
-
-  if (robotData->robotTurn == 0) {
-    robotData->robotTurn = 0;
+  if (dataIn->robotTurn == 0) {
+    dataIn->robotTurn = 0;
     rightWheelTick = 0;
     leftWheelTick = 0;
-    analogWrite(LEFT_WHEEL_FORWARD, robotData->robotSpeed);
-    analogWrite(RIGHT_WHEEL_FORWARD, robotData->robotSpeed);
-  } else  if (robotData->robotTurn == 1) {
+    analogWrite(LEFT_WHEEL_FORWARD, dataIn->robotSpeed);
+    analogWrite(RIGHT_WHEEL_FORWARD, dataIn->robotSpeed);
+  } else  if (dataIn->robotTurn == 1) {
     if (leftWheelTick < 500) {
-      analogWrite(LEFT_WHEEL_FORWARD, robotData->robotSpeed);
+      analogWrite(LEFT_WHEEL_FORWARD, dataIn->robotSpeed);
       analogWrite(RIGHT_WHEEL_FORWARD, STOP);
     } else {
-      robotData->robotTurn = 0;
+      dataIn->robotTurn = 0;
     }
-  } else if (robotData->robotTurn == -1) {
+  } else if (dataIn->robotTurn == -1) {
     if (rightWheelTick < 500) {
       analogWrite(LEFT_WHEEL_FORWARD, STOP);
-      analogWrite(RIGHT_WHEEL_FORWARD, robotData->robotSpeed);
+      analogWrite(RIGHT_WHEEL_FORWARD, dataIn->robotSpeed);
     }  else {
-      robotData->robotTurn = 0;
+      dataIn->robotTurn = 0;
 
     }
   }
@@ -265,6 +299,7 @@ void driveRobot() {
 // print matrix
 void printMatrix( const float matrix[][MATRIX_SIZE] ) {
   // loop through array's rows
+
   for ( int i = 0; i < MATRIX_SIZE; ++i ) {
     // loop through columns of current row
     for ( int j = 0; j < MATRIX_SIZE; ++j ) {
@@ -274,6 +309,7 @@ void printMatrix( const float matrix[][MATRIX_SIZE] ) {
     Serial.println (" " );
   }
   Serial.println (" " );
+
 }
 
 void rightWheelInterrupt(void) {
@@ -333,23 +369,6 @@ void leftWheelInterrupt(void) {
   }
 }
 
-void updateData() {
-  systemData->robotSpeed = 1;
-  systemData->robotTurn = 2;
-  systemData->robotAngle = 3;
-//  systemData->xPosition = 5;
-  //systemData->yPosition = 5;
-  //systemData->globalAngle = 5;
-
-}
-void orientRobot() {
-}
-void outputUDP() {
-  // send a reply, to the IP address and port that sent us the packet we received
-  Udp.beginPacket(Udp.remoteIP(), 5005);
-  Udp.write((uint8_t*)systemData, 12);
-  Udp.endPacket();
-}
 void initializePorts() {
   //intialize serial console
   Serial.begin(9600);
@@ -380,17 +399,67 @@ void initializePorts() {
   compass.enableDefault();
 
   compass.m_min = (LSM303::vector<int16_t>) {
-    +32767, +32767, +32767
+    -2058, -2014, -2626
   };
   compass.m_max = (LSM303::vector<int16_t>) {
-    -32767, -32767, -32767
+    +3026, +3968, +3617
   };
+  
+  memset (timeWindow, 0, sizeof(timeWindow));
 }
-void compassReading() {
+
+void pickUP() {
+  compass.read();
+
+  int i = 0;
+  int changeInAcceleration = 0;
+  unsigned long averageAcceleration = 0;
+
+  currentAcceleration = compass.a.z ;           // set cureent time
+
+  timeWindow[i_w] = (currentAcceleration) ;    // insert current time into time window
+
+  previousAcceleration = currentAcceleration;                      // save previous time
+
+  while (i < TIMEWINDOWSIZE) {
+    averageAcceleration += timeWindow[i];               // add up the total window time
+    i++;
+
+  }
+  averageAcceleration = averageAcceleration / TIMEWINDOWSIZE;
+
+  i_w ++;                           // increment time window frame
+
+  if (i_w >= TIMEWINDOWSIZE) {
+    i_w = 0;                        // reset time window frame it max fram is reached
+  }
+  changeInAcceleration = averageAcceleration - previousAverageAcceleration ;
+
+  if (changeInAcceleration > THRESHOLD) {
+    dataIn->robotSpeed = STOP;
+  }
+
+  previousAverageAcceleration = averageAcceleration;
+}
+
+void orientation() {
   compass.read();
   float heading = compass.heading();
+  globalAngle = heading;
+  Serial.println("heading");
   Serial.println(heading);
 }
 
+void rotate() {
+  if ((globalAngle > (dataIn->robotAngle + OFFSET)) || (globalAngle < (dataIn->robotAngle - OFFSET))) {
+    analogWrite(LEFT_WHEEL_FORWARD, STOP);
+    analogWrite(RIGHT_WHEEL_FORWARD, 90);
+  } else {
+    analogWrite(LEFT_WHEEL_FORWARD, STOP);
+    analogWrite(RIGHT_WHEEL_FORWARD, STOP);
+    delay(2000);
+    dataIn->robotAngle = 0;
+  }
 
+}
 #endif
