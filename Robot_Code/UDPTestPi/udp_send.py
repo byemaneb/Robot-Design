@@ -25,8 +25,8 @@ while True:
 	if key == "w":
 		speed += 10
 		
-		if speed < 50:
-			speed = 50 
+		if speed < 70:
+			speed = 70 
 		
 		if speed > 255:
 			speed = 255 
@@ -34,7 +34,7 @@ while True:
 	elif key == "s":
 		speed -= 10
 		
-		if speed < 50:
+		if speed < 70:
 			speed = 0 
 
 	elif key == "d":
