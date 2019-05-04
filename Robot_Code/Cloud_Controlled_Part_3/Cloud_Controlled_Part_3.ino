@@ -13,24 +13,17 @@ void setup() {
 
 void loop() {
   
-  /*
-    timeTick = millis();
-    while (timeTock < REFRESH_TIME ) {
-    timeCurrent = millis();
-    timeTock = timeCurrent - timeTick;
-    }
-  */
-  orientation();
-  readUDP();
-  pickUP();
+  orientation();  // read in heading data
+  eadUDP();      // open UDP port and read in UDP data
+
+  pickUp();       // pickUp = TRUE if thrshhold is reached
   
+  // check UDP angle data
   if(((dataIn->robotAngle) == 90)||((dataIn->robotAngle) == 180)||((dataIn->robotAngle) == 270)||((dataIn->robotAngle) == 360)){
-    rotate();
+    rotate();     // rotate robot until wanted orientation is reached
   }else{
-     driveRobot();
+    driveRobot();     // drive robot to UDP provided speed
   }
 
-
-  delay(100);
 
 }
