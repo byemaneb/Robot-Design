@@ -18,7 +18,6 @@ recieve.bind((UDP_IP_RECEIVE,UDP_PORT_RECEIVE))
 
 
 speed = 0
-turn = 0
 angle = 0
 returnData = False
 
@@ -90,24 +89,34 @@ try:
 		screen.addstr(3, 0, str(returnData))
 
 		#pack and send out UDP packet
-		sendOut = struct.pack("@fff?",speed,turn,angle,returnData)
+		sendOut = struct.pack("@ff",speed,angle)
 		send.sendto(sendOut, (UDP_IP_SEND, UDP_PORT_SEND))
 
 		if returnData == True:
 			data,addr = recieve.recvfrom(1024) # buffer size is 1024 bytes 
-			speed,turn,angle,xPosition,yPosition,globalAngle = struct.unpack("ffffff",data)
+			heading,xPos,yPos,zPos,ax,ay,az,mx,my,mz = struct.unpack("dddddddddd",data)
 			screen.clear()
-			screen.addstr(0, 0, "speed")
-			screen.addstr(1, 0, str(speed))
-			screen.addstr(2, 0, "turn")
-			screen.addstr(3, 0, str(turn))
-			screen.addstr(4, 0, "angle")
-			screen.addstr(5, 0, str(angle))
-			screen.addstr(6, 0, "position")
-			screen.addstr(7, 0, str(xPosition))
-			screen.addstr(8, 0, str(yPosition))
-			screen.addstr(9, 0, "globalAngle")
-			screen.addstr(10, 0, str(globalAngle))
+			screen.addstr(0, 0, "heading")
+			screen.addstr(1, 0, str(heading))
+			screen.addstr(2, 0, "xPos")
+			screen.addstr(3, 0, str(xPos))
+                        screen.addstr(4, 0, "yPos")
+                        screen.addstr(5, 0, str(yPos))
+                        screen.addstr(6, 0, "zPos")
+                        screen.addstr(7, 0, str(zPos))
+                        screen.addstr(8, 0, "ax")
+                        screen.addstr(9, 0, str(ax))
+                        screen.addstr(10, 0, "ay")
+                        screen.addstr(11, 0, str(ay))
+                        screen.addstr(12, 0, "az")
+                        screen.addstr(13, 0, str(az))
+                        screen.addstr(14, 0, "mx")
+                        screen.addstr(15, 0, str(mx))
+                        screen.addstr(16, 0, "my")
+                        screen.addstr(17, 0, str(my))
+                        screen.addstr(18, 0, "mz")
+                        screen.addstr(19, 0, str(mz))
+
 			returnData = False
 
 
