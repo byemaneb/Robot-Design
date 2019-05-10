@@ -13,10 +13,10 @@ void setup() {
 
 void loop() {
   
-  orientation();  // read in heading data
+ //orientation();  // read in heading data
   readUDP();      // open UDP port and read in UDP data
-
-  pickUP();       // pickUp = TRUE if thrshhold is reached
+  outputUDP();
+ // pickUP();       // pickUp = TRUE if thrshhold is reached
   
   // check UDP angle data
   if(((dataIn->robotAngle) == 90)||((dataIn->robotAngle) == 180)||((dataIn->robotAngle) == 270)||((dataIn->robotAngle) == 360)){

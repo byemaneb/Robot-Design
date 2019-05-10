@@ -3,8 +3,8 @@ import struct
 
 #C:\Users\berke\Documents\GitHub\Robot-Design\Robot_Code\UDPTestPi
 
-UDP_IP = "172.20.10.8"
-UDP_PORT = 5005
+UDP_IP = "192.168.1.100"
+UDP_PORT = 4242
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
 sock.bind((UDP_IP, UDP_PORT))
@@ -18,6 +18,4 @@ while True:
 	print("angle",angle)
 	print("xPosition",xPosition)
 	print("yPosition",yPosition)
-	print("globalAngle",globalAngle)
-	
-	
+	print("globalAngle",globalAngle)	

@@ -227,7 +227,7 @@ void outputUDP() {
   dataOut->yPosition = transformMatrix[1][3];
   dataOut->globalAngle = globalAngle;
 
-  Udp.beginPacket(Udp.remoteIP(), 5005);
+  Udp.beginPacket("172.20.10.8", 4242);
 
   Udp.write((byte*)dataOut, sizeof( sendData));
   Udp.endPacket();
@@ -255,15 +255,18 @@ void readUDP() {
     Udp.read( (byte *) &dataIn, 8);      // read the data packet
 
     //print incoming values
-    Serial.println("variable 1");
+    Serial.println("speed");
     Serial.println(dataIn->robotSpeed);
-    Serial.println("variable 2");
+    Serial.println("turn");
     Serial.println(dataIn->robotTurn);
-
+    Serial.println("angle");
+    Serial.println(dataIn->robotAngle);
+    Serial.println("return");
+    Serial.println(dataIn->returnData);
     if (len > 0) packetBuffer[len] = 0;
 
     if ((dataIn->returnData) == true) {
-      outputUDP();
+      //outputUDP();
       dataIn->returnData = false;
     }
   }

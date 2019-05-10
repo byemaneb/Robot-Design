@@ -23,14 +23,13 @@ void loop() {
   orientation();
   readUDP();
   pickUP();
+     
   
   if(((dataIn->robotAngle) == 90)||((dataIn->robotAngle) == 180)||((dataIn->robotAngle) == 270)||((dataIn->robotAngle) == 360)){
     rotate();
   }else{
-     driveRobot();
+    driveRobot();
   }
 
-
-  delay(100);
 
 }

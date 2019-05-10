@@ -28,7 +28,7 @@
 #define MATRIX_SIZE 4
 
 //use for imu pickup
-#define TIMEWINDOWSIZE  50
+#define TIMEWINDOWSIZE 100
 #define THRESHOLD 150
 
 //use for heading

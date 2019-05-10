@@ -1,10 +1,8 @@
 import socket
 import struct
 
-UDP_IP = "172.20.10.7"
+UDP_IP = "192.168.1.1"
 UDP_PORT = 5005
-MESSAGE = "Hello, World!"
-
 
 print ("UDP target IP:", UDP_IP)
 print ("UDP target port:", UDP_PORT)
